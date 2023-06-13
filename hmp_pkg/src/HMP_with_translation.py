@@ -339,7 +339,7 @@ class HMP:
         py_file= os.path.abspath(__file__) # path to main.py
         py_dir = os.path.dirname(py_file) # path to the parent dir of main.py
         # model_path = os.path.join(py_dir, '_vt_d.model') 
-        model_path = os.path.join(py_dir, '2_vt_d_all_changes.model') 
+        model_path = os.path.join(py_dir, '_vt_d_all_changes.model') 
         model_path_torso = os.path.join(py_dir, 'vt_d_trans.model') 
         # model_path = os.path.join(py_dir, '_vt_d_all_changes.model') 
 
