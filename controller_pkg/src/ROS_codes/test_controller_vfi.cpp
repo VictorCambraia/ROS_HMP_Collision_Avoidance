@@ -9,6 +9,7 @@ This file uses the DQ Robotics library.
 */
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Int32.h>
 
 #include "JacobianHMP.h"
 #include <dqrobotics/DQ.h>
@@ -28,12 +29,19 @@ using namespace DQ_robotics;
 // global variables
 std::string str_poses_human;
 int refresh_pose = 0;
+int stop_robot;
 
 void cb_update_hmp(const std_msgs::String::ConstPtr& msg){
     // ROS_INFO("I heard: [%s]", msg->data.c_str());
     str_poses_human = msg->data.c_str();
     refresh_pose = 1;
     std::cout << str_poses_human.substr(0,100) << std::endl;
+}
+
+void cb_stop_robot(const std_msgs::Int32::ConstPtr& msg){
+    // ROS_INFO("I heard: [%s]", msg->data.c_str());
+    stop_robot = int(msg->data);
+    std::cout << stop_robot << std::endl;
 }
 
 int main(int argc, char **argv){
@@ -133,13 +141,19 @@ int main(int argc, char **argv){
     int n_cols = J_hmp.num_dim;
     MatrixXd poses_human = 100*MatrixXd::Ones(n_rows, n_cols);
 
+    // Define the pose of the camera
+    DQ pose_camera = DQ(1);
+
     // Initialize the variables that we be used later
     double tau = 0.01; //It works as a delta_t
     VectorXd q;
 
-    // Initialize the subscriber
-    ros::NodeHandle n;
-    ros::Subscriber sub_prediction = n.subscribe("prediction_human", 1000, cb_update_hmp);
+    // Initialize the subscribers
+    ros::NodeHandle n_pred;
+    ros::Subscriber sub_prediction = n_pred.subscribe("prediction_human", 1000, cb_update_hmp);
+
+    ros::NodeHandle n_stop;
+    ros::Subscriber sub_stop_robot = n_stop.subscribe("stop_robot", 1000, cb_stop_robot);
 
     //   ros::spin();
 
@@ -183,7 +197,7 @@ int main(int argc, char **argv){
             }
 
             if(refresh_pose == 1){
-                poses_human = J_hmp.transform_points_human2matrix(str_poses_human);
+                poses_human = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
                 refresh_pose = 0;
             }
 
@@ -360,8 +374,13 @@ int main(int argc, char **argv){
             VectorXd u(n);
             // If there is some error/exception, mainly regarding the solver not finding a solution...
             try{
-                // Get the next control signal [rad/s]
-                u << translation_controller.compute_setpoint_control_signal(q,vec4(td));
+                if(stop_robot == 1){
+                    u << VectorXd::Zero(n);
+                }
+                else{
+                  // Get the next control signal [rad/s]
+                u << translation_controller.compute_setpoint_control_signal(q,vec4(td));  
+                } 
             }
             catch(std::exception& e){
                 std::cout << e.what() << std::endl;

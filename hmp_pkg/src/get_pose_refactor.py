@@ -290,7 +290,9 @@ class estimate_pose:
     def __init__(self) -> None:
 
         # INITIALIZATION REGARDING ROS PUBLISHER
-        self.pub = rospy.Publisher('pose_human', String, queue_size=50)
+        self.pub_pose = rospy.Publisher('pose_human', String, queue_size=50)
+
+        self.pub_stop_robot = rospy.Publisher('stop_robot', int, queue_size=50)
 
         # INITIALIZATION REGARDING REALSENSE
 
@@ -384,6 +386,7 @@ class estimate_pose:
 
             if self.result_joints.pose_world_landmarks == None:
                 print("NOBODY DETECTED IN THE IMAGE")
+                self.check_camera_covered()
                 # Reset the test_MSE variable
                 self.test_MSE = 0
                 return
@@ -468,6 +471,12 @@ class estimate_pose:
 
         return color_frame, depth_frame, color_image, depth_colormap
 
+    def check_camera_covered(self):
+        # Check somehow if the the camera is covered or not
+        # If the camera is covered, we send a msg to stop the robot. Stop robot becomes 1
+        stop_robot = 0
+        self.pub_stop_robot.publish(stop_robot)
+
     def publish_pose(self, pose_torso_ref, torso_real_coord):
 
         msg_pose = self.create_msg_pose(pose_torso_ref, torso_real_coord)
@@ -475,7 +484,7 @@ class estimate_pose:
         if msg_pose == None:
             return -1
 
-        self.pub.publish(msg_pose)
+        self.pub_pose.publish(msg_pose)
         return 0
 
     def create_msg_pose(self, pose, torso_coord):

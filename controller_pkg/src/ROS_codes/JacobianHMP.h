@@ -36,6 +36,10 @@ public:
 
     // Methods
     void add_counter(int value);
+    // This function shouldnt be here in this class
+    MatrixXd transform_camera_points_2matrix(std::string& str_numbers, DQ& pose_camera);
+    // This function as well
+    VectorXd change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref);
     MatrixXd transform_points_human2matrix(std::string& str_numbers);
     std::tuple<MatrixXd, VectorXd> get_jacobian_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human);
     std::tuple<int, DQ> check_get_plane(MatrixXd &points_plane, const DQ &t);
