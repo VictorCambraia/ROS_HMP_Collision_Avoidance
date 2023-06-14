@@ -1,6 +1,28 @@
 # ROS_HMP_Collision_Avoidance
 This repo wil contain all the code (files and directories) of the ROS workspace to run the entire work related with HMP and collision avoidance (controller + VFI part)
 
+-----------------------------------
+TODOs of the repo
+
+I have just run for the first time in coppeliaSIm the system completely integrated (HMP + VFI + controller).
+And I noticed some things that I need to think how I solve them
+
+1 - If the camera doesnt capture the human motion, then we consider that the robot is free to move or not?
+  The first idea that came through my mind was: If the camera is being blocked (that means if there is  something blocking the view), then the robot should stop. However, if the  camera is "watching" everything, then we should probably just keep going (there is nobody present).
+  
+2 - What should I do when the solver cannot find a solution? I should probably just stop the robot right?
+
+3 - I NEED to take in account that the robot base is not in the (0,0,0) postion
+
+4 - I NEED to take in account the variance of the points!!! 
+
+TODOs that are not a must (but would be good if I could implement them)
+
+-> Search for others datasets (I actually dont think I will have enough time for this)
+
+--------------------------------
+Where were the codes before this repo?
+
 So, before creating this repo and this new catkin/ros workspace.  The codes were splitted in different directories in the PC from the uni and also in my personal notebook. So, it was kind of a mess. Anyway, I will try to register here where were everything, so if I need to recover something someday, I remeber about it.
 
 In my personal PC:
