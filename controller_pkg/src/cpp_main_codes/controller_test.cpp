@@ -34,8 +34,8 @@ int main(void)
     DQ_SerialManipulatorMDH franka = FrankaEmikaPandaRobot::kinematics();
 
     //Update the base of the robot from CoppeliaSim
-    // DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(1+0.5*E_*(-0.07*k_));
-    DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(DQ(1));
+    DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(1+0.5*E_*(-0.07*k_));
+    // DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(DQ(1));
     franka.set_reference_frame(new_base_robot);
     //---------------------------------------------------------------
 

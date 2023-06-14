@@ -38,8 +38,8 @@ int main(void)
     DQ_SerialManipulatorMDH franka = FrankaEmikaPandaRobot::kinematics();
 
     //Update the base of the robot from CoppeliaSim
-    // DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(1+0.5*E_*(-0.07*k_));
-    DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(DQ(1));
+    DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(1+0.5*E_*(-0.07*k_));
+    // DQ new_base_robot = (franka.get_base_frame())*vi.get_object_pose("Franka")*(DQ(1));
     franka.set_reference_frame(new_base_robot);
     //---------------------------------------------------------------
 
@@ -110,6 +110,9 @@ int main(void)
 
     // Get the object from the class that will return the jacobian for us
     JacobianHMP J_hmp = JacobianHMP(d_safe_j);
+
+    // Define the pose of the camera
+    DQ pose_camera = DQ(1);
 
     // Initialize the variables that we be used later
     double tau = 0.01; //It works as a delta_t

@@ -47,8 +47,10 @@ void JacobianHMP::add_counter(int value){
     counter = counter + value;
 }
 
-MatrixXd JacobianHMP::transform_points_human2matrix(std::string& str_numbers){
-    
+// This function should not be here (there is not relation with the jacobian)
+// Later should put this function somewhere else
+MatrixXd JacobianHMP::transform_camera_points_2matrix(std::string& str_numbers, DQ& pose_camera){
+
     int n_rows = num_poses*num_joints_per_pose;
 
     std::stringstream sstr_values(str_numbers);
@@ -63,9 +65,26 @@ MatrixXd JacobianHMP::transform_points_human2matrix(std::string& str_numbers){
             getline(sstr_values, substr, ',');
             point.push_back(std::stod(substr));
         }
-        points_human.row(i) << point[0], point[1], point[2];
+        VectorXd point_camera(3);
+        // ATTENTION, HERE I AM CHANGING THE AXIS Y AND Z
+        // Because of the camera wrong axis
+        point_camera << point[0], point[2], point[1];
+        VectorXd point_lab = change_ref_to_lab(point_camera, pose_camera);
+        points_human.row(i) << point_lab;
     }
     return points_human;
+}
+
+VectorXd JacobianHMP::change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref){
+    DQ point_ref_q = DQ(point_ref);
+    DQ point_ref_dq = 1 + 0.5*E_*point_ref_q;
+
+    DQ point_lab_dq = pose_ref*point_ref_dq;
+    DQ point_lab_q = translation(point_lab_dq);
+
+    VectorXd point_lab = vec3(point_lab_q);
+
+    return point_lab;
 }
 
 // std::tuple<MatrixXd, VectorXd> 
