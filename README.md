@@ -10,7 +10,7 @@ And I noticed some things that I need to think how I solve them
 1 - If the camera doesnt capture the human motion, then we consider that the robot is free to move or not?
   The first idea that came through my mind was: If the camera is being blocked (that means if there is  something blocking the view), then the robot should stop. However, if the  camera is "watching" everything, then we should probably just keep going (there is nobody present).
   
-2 - What should I do when the solver cannot find a solution? I should probably just stop the robot right?
+2 - What should I do when the solver cannot find a solution? I should probably just stop the robot right? (DONE, I think)
 
 3 - I NEED to take in account that the robot base is not in the (0,0,0) postion
 

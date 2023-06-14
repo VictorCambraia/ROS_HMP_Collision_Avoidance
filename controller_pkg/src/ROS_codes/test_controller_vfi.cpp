@@ -357,8 +357,16 @@ int main(int argc, char **argv){
             // Update the linear inequalities in the controller
             translation_controller.set_inequality_constraint(A, b);
 
-            // Get the next control signal [rad/s]
-            VectorXd u = translation_controller.compute_setpoint_control_signal(q,vec4(td));
+            VectorXd u(n);
+            // If there is some error/exception, mainly regarding the solver not finding a solution...
+            try{
+                // Get the next control signal [rad/s]
+                u << translation_controller.compute_setpoint_control_signal(q,vec4(td));
+            }
+            catch(std::exception& e){
+                std::cout << e.what() << std::endl;
+                u << VectorXd::Zero(n);
+            }
             
             // Move the robot
             q = q + u*tau;
