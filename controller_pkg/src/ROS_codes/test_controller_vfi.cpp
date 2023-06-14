@@ -33,6 +33,7 @@ void cb_update_hmp(const std_msgs::String::ConstPtr& msg){
     // ROS_INFO("I heard: [%s]", msg->data.c_str());
     str_poses_human = msg->data.c_str();
     refresh_pose = 1;
+    std::cout << str_poses_human.substr(0,100) << std::endl;
 }
 
 int main(int argc, char **argv){
@@ -130,7 +131,7 @@ int main(int argc, char **argv){
     //Initialize the variable that will store the human poses
     int n_rows = J_hmp.num_poses*J_hmp.num_poses;
     int n_cols = J_hmp.num_dim;
-    MatrixXd poses_human(n_rows, n_cols) = 100*MatrixXd::Ones(n_rows, n_cols);
+    MatrixXd poses_human = 100*MatrixXd::Ones(n_rows, n_cols);
 
     // Initialize the variables that we be used later
     double tau = 0.01; //It works as a delta_t

@@ -1,12 +1,17 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 
-/**
- * This tutorial demonstrates simple receipt of messages over the ROS system.
- */
+// global variables
+std::string str_poses_human;
+int refresh_pose = 0;
+
 void chatterCallback(const std_msgs::String::ConstPtr& msg){
-  ROS_INFO("I heard: [%s]", msg->data.c_str());
+    // ROS_INFO("I heard: [%s]", msg->data.c_str());
+    str_poses_human = msg->data.c_str();
+    refresh_pose = 1;
+    std::cout << str_poses_human.substr(0,100) << std::endl;
 }
+
 
 int main(int argc, char **argv){
   /**
