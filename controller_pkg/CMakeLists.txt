@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
+include(${CMAKE_CURRENT_SOURCE_DIR}/src/dqrobotics_dependencies.cmake)
+
+find_package(Threads REQUIRED)
+
 project(controller_pkg)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -13,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
 )
+
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -141,6 +147,24 @@ target_link_libraries(test_subscriber ${catkin_LIBRARIES})
 
 add_executable(test_publisher src/ROS_codes/test_publisher.cpp)
 target_link_libraries(test_publisher ${catkin_LIBRARIES})
+
+add_executable(test_controller_vfi
+src/ROS_codes/test_controller_vfi.cpp
+src/ROS_codes/JacobianHMP.cpp
+)
+target_link_libraries(test_controller_vfi ${catkin_LIBRARIES})
+
+TARGET_LINK_LIBRARIES(test_controller_vfi
+    pthread
+    dqrobotics
+    dqrobotics-interface-vrep
+    qpOASES
+)
+
+TARGET_INCLUDE_DIRECTORIES(test_controller_vfi
+PRIVATE
+"${CMAKE_CURRENT_SOURCE_DIR}"
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

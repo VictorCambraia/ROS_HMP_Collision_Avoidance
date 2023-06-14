@@ -63,7 +63,9 @@ MatrixXd JacobianHMP::transform_points_human2matrix(std::string& str_numbers){
             getline(sstr_values, substr, ',');
             point.push_back(std::stod(substr));
         }
-        points_human.row(i) << point[0], point[1], point[2];
+        // HERE I AM CHANGING THE Y AND Z VALUES
+        // Because the axis z for the camera is the distance to the robot, and to coppelia is the y axis
+        points_human.row(i) << point[0], point[2], point[1];
     }
     return points_human;
 }

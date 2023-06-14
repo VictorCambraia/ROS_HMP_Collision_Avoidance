@@ -378,7 +378,7 @@ class estimate_pose:
 
         self.color_frame, self.depth_frame, self.color_image, self.skel_depth_image = self.get_camera_frame()
 
-        if self.counter % 4 == 0:
+        if self.counter % 5 == 0:
 
             self.result_joints, self.skel_image = self.skel.get_skeleton(self.color_image)
 

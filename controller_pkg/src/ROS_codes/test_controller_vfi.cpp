@@ -123,13 +123,13 @@ int main(int argc, char **argv){
 
     // Define the safety parameters for the human
     VectorXd d_safe_j(3);
-    d_safe_j << 0.02, 0.2, 0.4;
+    d_safe_j << 0.05, 0.4, 0.6;
 
     // Get the object from the class that will return the jacobian for us
     JacobianHMP J_hmp = JacobianHMP(d_safe_j);
 
     //Initialize the variable that will store the human poses
-    int n_rows = J_hmp.num_poses*J_hmp.num_poses;
+    int n_rows = J_hmp.num_poses*J_hmp.num_joints_per_pose;
     int n_cols = J_hmp.num_dim;
     MatrixXd poses_human = 100*MatrixXd::Ones(n_rows, n_cols);
 
@@ -147,20 +147,20 @@ int main(int argc, char **argv){
     int counter; // count the number of cycles
     int decide_td = 0; //aux variable to choose the td
     DQ td; // the desired position of the robot
-    int N = 10; // Number of times that the robot will change the td
+    int N = 100; // Number of times that the robot will change the td
 
     // Define the goals of the robot (td)
     for(i=0; i<N; i++){
         if(decide_td == 0){
-            td = 0.3*i_ + 0.7*j_ + 0.45*k_;
-            decide_td = 1;
+            td = 0.4*i_ + 0.6*j_ + 0.3*k_;
+            decide_td = 2;
         }
         else if(decide_td == 1){
             td = 0.0*i_ + 0.60*j_ + 0.8*k_;
             decide_td = 2;
         }
         else if(decide_td == 2){
-            td = -0.3*i_ + 0.7*j_ + 0.55*k_;
+            td = -0.4*i_ + 0.6*j_ + 0.3*k_;
             decide_td = 0;
         }
         
