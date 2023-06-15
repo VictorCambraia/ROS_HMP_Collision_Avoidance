@@ -293,6 +293,7 @@ class estimate_pose:
         self.pub_pose = rospy.Publisher('pose_human', String, queue_size=50)
 
         self.pub_stop_robot = rospy.Publisher('stop_robot', int, queue_size=50)
+        self.period_pub_stop = 30
 
         # INITIALIZATION REGARDING REALSENSE
 
@@ -386,10 +387,17 @@ class estimate_pose:
 
             if self.result_joints.pose_world_landmarks == None:
                 print("NOBODY DETECTED IN THE IMAGE")
-                self.check_camera_covered()
+                if self.counter % self.period_pub_stop == 0:
+                    self.check_camera_covered(self.depth_frame)
                 # Reset the test_MSE variable
                 self.test_MSE = 0
                 return
+            else:
+                if self.counter % self.period_pub_stop == 0:
+                    #Publish here saying that the robot should not stop
+                    stop_robot = 1
+                    self.pub_stop_robot.publish(stop_robot)
+                
 
             self.u_pose, self.visibility = self.skel.upper_pose_from_landmark(self.result_joints.pose_world_landmarks.landmark)
 
@@ -471,10 +479,26 @@ class estimate_pose:
 
         return color_frame, depth_frame, color_image, depth_colormap
 
-    def check_camera_covered(self):
+    # TODO Maybe change some hard coded values for parameters (400 for example)
+    def check_camera_covered(self, depth_frame, dist_close = 0.4):
         # Check somehow if the the camera is covered or not
         # If the camera is covered, we send a msg to stop the robot. Stop robot becomes 1
+        stop = False
         stop_robot = 0
+        n_close_points = 0
+        for y in range(100,380, 10):
+            for x in range(100,540, 10):
+                dist = depth_frame.get_distance(x, y)
+                if dist < dist_close:
+                    n_close_points += 1
+                    # If more than 400 points are close, then we consider that the robot is covered
+                    if n_close_points > 400:
+                        stop = True
+                        stop_robot = 1
+                        break
+            if stop == True:
+                break
+
         self.pub_stop_robot.publish(stop_robot)
 
     def publish_pose(self, pose_torso_ref, torso_real_coord):
