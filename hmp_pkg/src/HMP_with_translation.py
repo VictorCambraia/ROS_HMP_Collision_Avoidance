@@ -323,7 +323,7 @@ class HMP:
         self.pub = rospy.Publisher('prediction_human', String, queue_size=50)
 
         # self.CHECK_PERIOD = 10
-        self.CHECK_PERIOD = 1000
+        self.CHECK_PERIOD = 0.5
 
         # WE COULD CONSIDER THE POSE MATRIX A NEW CLASS (JUST AN IDEA)
         # Create a clear pose matrix
@@ -379,7 +379,7 @@ class HMP:
         for i in range(prediction.shape[0]):
             msg = msg + "{:.4f}".format(prediction[i]) + ","
     
-        print(msg)
+        # print(msg)
         return msg
         
 
@@ -645,9 +645,9 @@ class HMP:
 
                     run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled)
 
-                    if self.counter %80 == 0:
-                        self.publish_pose(self.last_prediction_scaled)
+                    self.publish_pose(self.last_prediction_scaled)
 
+                    if self.counter %100 == 0:
                         print("\n PREDICTION IS THE FOLLOWING  \n", self.last_prediction_scaled[0,24:27], "\n", self.last_prediction_scaled[0,1347:])
                         # self.skel.plot_skeleton_Full_Window(self.skel.torso, self.last_prediction_scaled[0,675:702],1)
                         # self.skel.plot_skeleton_Full_Window2(self.skel.torso, self.last_prediction_scaled[0,:27], self.last_prediction_scaled[0,1323:])

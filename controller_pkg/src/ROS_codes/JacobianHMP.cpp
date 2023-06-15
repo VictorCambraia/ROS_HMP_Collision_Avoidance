@@ -70,7 +70,7 @@ MatrixXd JacobianHMP::transform_camera_points_2matrix(std::string& str_numbers, 
         // Because of the camera wrong axis
         point_camera << point[0], point[2], point[1];
         VectorXd point_lab = change_ref_to_lab(point_camera, pose_camera);
-        points_human.row(i) << point_lab;
+        points_human.row(i) << point_lab[0], point_lab[1], point_lab[2];
     }
     return points_human;
 }
@@ -81,7 +81,6 @@ VectorXd JacobianHMP::change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref){
 
     DQ point_lab_dq = pose_ref*point_ref_dq;
     DQ point_lab_q = translation(point_lab_dq);
-
     VectorXd point_lab = vec3(point_lab_q);
 
     return point_lab;

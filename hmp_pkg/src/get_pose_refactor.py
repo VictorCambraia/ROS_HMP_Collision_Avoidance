@@ -3,6 +3,7 @@
 import rospy
 # import cv_bridge
 from std_msgs.msg import String
+from std_msgs.msg import Int32
 
 import cv2
 import pyrealsense2 as rs
@@ -292,7 +293,7 @@ class estimate_pose:
         # INITIALIZATION REGARDING ROS PUBLISHER
         self.pub_pose = rospy.Publisher('pose_human', String, queue_size=50)
 
-        self.pub_stop_robot = rospy.Publisher('stop_robot', int, queue_size=50)
+        self.pub_stop_robot = rospy.Publisher('stop_robot', Int32, queue_size=50)
         self.period_pub_stop = 30
 
         # INITIALIZATION REGARDING REALSENSE
@@ -381,7 +382,7 @@ class estimate_pose:
 
         self.color_frame, self.depth_frame, self.color_image, self.skel_depth_image = self.get_camera_frame()
 
-        if self.counter % 5 == 0:
+        if self.counter % 1 == 0:
 
             self.result_joints, self.skel_image = self.skel.get_skeleton(self.color_image)
 
@@ -395,7 +396,7 @@ class estimate_pose:
             else:
                 if self.counter % self.period_pub_stop == 0:
                     #Publish here saying that the robot should not stop
-                    stop_robot = 1
+                    stop_robot = 0
                     self.pub_stop_robot.publish(stop_robot)
                 
 

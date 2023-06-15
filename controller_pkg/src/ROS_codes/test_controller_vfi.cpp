@@ -35,7 +35,7 @@ void cb_update_hmp(const std_msgs::String::ConstPtr& msg){
     // ROS_INFO("I heard: [%s]", msg->data.c_str());
     str_poses_human = msg->data.c_str();
     refresh_pose = 1;
-    std::cout << str_poses_human.substr(0,100) << std::endl;
+    // std::cout << str_poses_human.substr(0,100) << std::endl;
 }
 
 void cb_stop_robot(const std_msgs::Int32::ConstPtr& msg){
@@ -197,8 +197,10 @@ int main(int argc, char **argv){
             }
 
             if(refresh_pose == 1){
-                poses_human = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
+                // std::cout << "AQUIII 1  " << std::endl;
+                poses_human << J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
                 refresh_pose = 0;
+                // std::cout << "AQUIII 2  " << std::endl;
             }
 
 
