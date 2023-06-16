@@ -24,7 +24,7 @@ using namespace Eigen;
 
 namespace DQ_robotics{
 
-JacobianHMP::JacobianHMP(const VectorXd &d_safe){
+JacobianHMP::JacobianHMP(const VectorXd &d_safe, double K_error_value = 0.2){
     
     counter = 0;
     num_poses = 50;
@@ -41,6 +41,8 @@ JacobianHMP::JacobianHMP(const VectorXd &d_safe){
         d_safe_torso = d_safe[1];
         d_safe_head = d_safe[2];
     }
+
+    K_error = K_error_value;
 }
 // I should  actually delete it!!!
 void JacobianHMP::add_counter(int value){
@@ -133,7 +135,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialMa
         
         point = DQ(points_human.row(i));
         double dist_p = double(norm(t - point));
-        dist_p = dist_p - error_joints[i];
+        dist_p = dist_p - K_error*error_joints[i];
 
         if(i%num_joints_per_pose == 2){
             dist_p = dist_p - d_safe_head;

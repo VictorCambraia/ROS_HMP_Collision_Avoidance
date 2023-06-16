@@ -30,9 +30,11 @@ public:
     int num_dim;
     // Probably I should add another variable that would represent the number of joints in each pose
     int num_joints_per_pose;
+    // Parameter regarding the importance of the error_joints (related with the joint sigma)
+    double K_error;
 
     // COnstructor
-    JacobianHMP(const VectorXd &d_safe);
+    JacobianHMP(const VectorXd &d_safe, double K_error = 0.2);
 
     // Methods
     void add_counter(int value);

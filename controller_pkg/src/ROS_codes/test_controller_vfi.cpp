@@ -133,8 +133,11 @@ int main(int argc, char **argv){
     VectorXd d_safe_j(3);
     d_safe_j << 0.05, 0.4, 0.6;
 
+    //If you want to change the K_error factor from 0.2 to other value, write it here
+    double K_error = 0.1;
+
     // Get the object from the class that will return the jacobian for us
-    JacobianHMP J_hmp = JacobianHMP(d_safe_j);
+    JacobianHMP J_hmp = JacobianHMP(d_safe_j, K_error);
 
     //Initialize the variable that will store the human poses
     int n_rows = J_hmp.num_poses*J_hmp.num_joints_per_pose;
