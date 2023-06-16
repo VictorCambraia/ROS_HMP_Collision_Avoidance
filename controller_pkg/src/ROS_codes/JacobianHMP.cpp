@@ -49,12 +49,13 @@ void JacobianHMP::add_counter(int value){
 
 // This function should not be here (there is not relation with the jacobian)
 // Later should put this function somewhere else
-MatrixXd JacobianHMP::transform_camera_points_2matrix(std::string& str_numbers, DQ& pose_camera){
+std::tuple<MatrixXd, VectorXd> JacobianHMP::transform_camera_points_2matrix(std::string& str_numbers, DQ& pose_camera){
 
     int n_rows = num_poses*num_joints_per_pose;
 
     std::stringstream sstr_values(str_numbers);
     MatrixXd points_human(n_rows,num_dim);
+    VectorXd error_joints(n_rows);
 
     std::vector<double> point;
     int i,j;
@@ -72,7 +73,19 @@ MatrixXd JacobianHMP::transform_camera_points_2matrix(std::string& str_numbers, 
         VectorXd point_lab = change_ref_to_lab(point_camera, pose_camera);
         points_human.row(i) << point_lab[0], point_lab[1], point_lab[2];
     }
-    return points_human;
+        for(i=0; i<n_rows; i++){
+        point.clear();
+        for(j=0; j<num_dim;j++){
+            std::string substr;
+            getline(sstr_values, substr, ',');
+            point.push_back(std::stod(substr));
+        }
+        VectorXd log_sigma(3);
+        log_sigma << point[0], point[1], point[2];
+        double max_log_sigma = log_sigma.maxCoeff();
+        error_joints[i] = std::exp(max_log_sigma);
+    }
+    return std::make_tuple(points_human, error_joints);
 }
 
 VectorXd JacobianHMP::change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref){
@@ -87,7 +100,7 @@ VectorXd JacobianHMP::change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref){
 }
 
 // std::tuple<MatrixXd, VectorXd> 
-std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human){
+std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &error_joints){
 
     int total_pose;
     int num_points_human = points_human.rows();
@@ -120,6 +133,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialMa
         
         point = DQ(points_human.row(i));
         double dist_p = double(norm(t - point));
+        dist_p = dist_p - error_joints[i];
 
         if(i%num_joints_per_pose == 2){
             dist_p = dist_p - d_safe_head;

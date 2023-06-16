@@ -314,7 +314,7 @@ class Skeleton:
 
 class HMP:
 
-    def __init__(self) -> None:
+    def __init__(self, continuous_model) -> None:
 
         self.counter = 0
         self.timer_prev = rospy.get_time()
@@ -324,6 +324,9 @@ class HMP:
 
         # self.CHECK_PERIOD = 10
         self.CHECK_PERIOD = 0.5
+
+        # The parameter that decides if the model is continuous or not
+        self.continuous_model = continuous_model
 
         # WE COULD CONSIDER THE POSE MATRIX A NEW CLASS (JUST AN IDEA)
         # Create a clear pose matrix
@@ -339,13 +342,16 @@ class HMP:
         py_file= os.path.abspath(__file__) # path to main.py
         py_dir = os.path.dirname(py_file) # path to the parent dir of main.py
         # model_path = os.path.join(py_dir, '_vt_d.model') 
-        model_path = os.path.join(py_dir, '_vt_d_all_changes.model')
-        # model_path = os.path.join(py_dir, 'vt_continuous.model') 
+
+        if continuous_model:
+            model_path = os.path.join(py_dir, 'vt_continuous.model') 
+        else:
+            model_path = os.path.join(py_dir, '_vt_d_all_changes.model')
+
         model_path_torso = os.path.join(py_dir, 'vt_d_trans.model') 
         # model_path = os.path.join(py_dir, '_vt_d_all_changes.model') 
 
         self.model = tf.keras.models.load_model(model_path)
-
         self.model_torso = tf.keras.models.load_model(model_path_torso)
 
         self.model.summary()
@@ -355,20 +361,19 @@ class HMP:
         rospy.Subscriber("pose_human", String, self.cb_motion_prediction)
 
     
-    def publish_pose(self, prediction):
+    def publish_pose(self, prediction, log_sigma):
 
         # Make sure that the prediction is just a vector (and not a matrix)
         prediction = prediction.reshape(-1)
-
-        msg_pose = self.create_msg_pose(prediction)
-
+        log_sigma = log_sigma.reshape(-1)
+        msg_pose = self.create_msg_pose(prediction, log_sigma)
         if msg_pose == None:
             return -1
 
         self.pub.publish(msg_pose)
         return 0
 
-    def create_msg_pose(self, prediction):
+    def create_msg_pose(self, prediction, log_sigma):
 
         # I actually dont think this can happen
         if prediction.size == 0:
@@ -379,8 +384,11 @@ class HMP:
 
         for i in range(prediction.shape[0]):
             msg = msg + "{:.4f}".format(prediction[i]) + ","
+
+        for i in range(log_sigma.shape[0]):
+            msg = msg + "{:.4f}".format(log_sigma[i]) + ","
     
-        # print(msg)
+        print(msg)
         return msg
         
 
@@ -393,10 +401,9 @@ class HMP:
 
     def reset_prediction_matrix(self):
         self.prediction_matrix = np.array([])
-
         # Adding the TORSO part (Maybe I wont use it)
-        self.prediction_torso_matrix = np.array([])
-
+        self.prediction_scaled_matrix = np.array([])
+        self.log_sigma_complete_matrix = np.array([])
     
     def add_pose_matrix(self, pose_skel, torso_coord):
 
@@ -456,27 +463,27 @@ class HMP:
 
             return 1
         
-    def add_prediction_matrix(self, new_prediction, new_prediction_scaled):
+    def add_prediction_matrix(self, new_prediction, new_prediction_scaled, new_log_sigma_complete):
 
         # Now we have 2 prediction matrices, one with the normalized data, and other complete (scaled + torso)
 
         # Guarantee that new_prediction has only one row
         new_prediction = np.reshape(new_prediction, (1,-1))
-
         new_prediction_scaled = np.reshape(new_prediction_scaled, (1,-1))
+        new_log_sigma_complete = np.reshape(new_log_sigma_complete, (1,-1))
 
         if self.prediction_matrix.size == 0:
+
             self.prediction_matrix = np.array(new_prediction)
-
             self.prediction_scaled_matrix = np.array(new_prediction_scaled)
-
+            self.log_sigma_complete_matrix = np.array(new_log_sigma_complete)
             return 0
         
         elif self.prediction_matrix.shape[0] < 50+1:
 
             self.prediction_matrix = np.vstack([self.prediction_matrix, new_prediction])
-
             self.prediction_scaled_matrix = np.vstack([self.prediction_scaled_matrix, new_prediction_scaled])
+            self.log_sigma_complete_matrix = np.vstack([self.log_sigma_complete_matrix, new_log_sigma_complete])
 
             return 0
         
@@ -488,6 +495,9 @@ class HMP:
 
             self.prediction_scaled_matrix[:-1,:] = self.prediction_scaled_matrix[1:,:]
             self.prediction_scaled_matrix[-1] = new_prediction_scaled
+
+            self.log_sigma_complete_matrix[:-1,:] = self.log_sigma_complete_matrix[1:,:]
+            self.log_sigma_complete_matrix[-1] = new_log_sigma_complete
 
             return 1
         
@@ -532,12 +542,18 @@ class HMP:
 
         input_predict = self.pose_matrix_normalized.reshape(-1,1200)
 
-        # prediction = self.model.predict([input_predict, input_predict])[0]
-        prediction = self.model([input_predict, input_predict])[0]
-        prediction = np.array(prediction)
+        # log_sigma is the error assoicated with the prediction
+        if self.continuous_model:
+            (prediction, log_sigma) = self.model([input_predict, input_predict])
+            prediction = np.array(prediction[0])
+            log_sigma = np.array(log_sigma[0])
+        else:
+            prediction = self.model([input_predict, input_predict])
+            prediction = np.array(prediction[0])
+            log_sigma = np.zeros(prediction.shape)
 
 
-        # AGORA COM O OFF SET FAZENDO UM TIPO DE FADED
+        # AGORA COM O OFFSET FAZENDO UM TIPO DE FADED
         single_pose = np.array(input_predict[0,1176:])
         diff_single = prediction[:24] - single_pose
 
@@ -570,6 +586,14 @@ class HMP:
         prediction_scaled = copy.deepcopy(prediction.reshape(50,24))
         prediction_scaled = np.hstack([np.zeros((prediction_scaled.shape[0],3)),prediction_scaled])
 
+        # We also need to do the same for the log_sigma (combine torso to the others joints)... The torso error to be considered will be 0. And that is for two reasons
+        # 1 - It would be very small, because in fact the torso is very predictable
+        # 2 - We would sum the torso error in all the joints, so  it wouldn't make any final difference, when comparing the joints
+
+        # We also don't need to scale the log_sigma because there will be a constant in the future already scaling it up
+        log_sigma_complete = log_sigma.reshape(50,24)
+        log_sigma_complete = np.hstack([np.zeros((log_sigma_complete.shape[0],3)),log_sigma_complete])
+
         prediction_torso = prediction_torso.reshape(50,-1)
 
         # for i in range(1):
@@ -589,6 +613,7 @@ class HMP:
 
         # prediction_scaled becomes (1,27*50) instead of (50,27)
         prediction_scaled = prediction_scaled.reshape(1,-1)
+        log_sigma_complete = log_sigma_complete.reshape(1,-1)
 
         # TRANSLATE THE POSE BY THE TORSO COORD VALUE
 
@@ -598,7 +623,7 @@ class HMP:
 
         # print(time_now4 - time_now3) 
 
-        return prediction, prediction_scaled
+        return prediction, prediction_scaled, log_sigma_complete
     
 
     def cb_motion_prediction(self, data):
@@ -642,11 +667,11 @@ class HMP:
                 # Manda rodar a previsão se a matriz tiver cheia
                 if run_vae_decision == 1:
                     if self.counter %1 == 0:
-                        self.last_prediction, self.last_prediction_scaled = self.predict_motion()
+                        self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete = self.predict_motion()
 
-                    run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled)
+                    run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete)
 
-                    self.publish_pose(self.last_prediction_scaled)
+                    self.publish_pose(self.last_prediction_scaled, self.last_log_sigma_complete)
 
                     if self.counter %100 == 0:
                         print("\n PREDICTION IS THE FOLLOWING  \n", self.last_prediction_scaled[0,24:27], "\n", self.last_prediction_scaled[0,1347:])
@@ -705,7 +730,7 @@ class HMP:
 if __name__ == '__main__':
 
     rospy.init_node("human_motion_prediction", anonymous=True)
-    node = HMP()
+    node = HMP(continuous_model=True)
 
     try:
         rospy.spin()
