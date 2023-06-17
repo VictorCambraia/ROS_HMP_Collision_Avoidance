@@ -24,7 +24,7 @@ using namespace Eigen;
 
 namespace DQ_robotics{
 
-JacobianHMP::JacobianHMP(const VectorXd &d_safe, double K_error_value = 0.2){
+JacobianHMP::JacobianHMP(const VectorXd &d_safe, double K_error_value){
     
     counter = 0;
     num_poses = 50;
@@ -153,10 +153,96 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialMa
         }
     }
 
-    // std::cout << "HMP   AQUI 0.5  " << std::endl;
+    return choose_Jacobian(franka, Jt, t, points_human, i_min);
+}
 
+std::tuple<MatrixXd, VectorXd> JacobianHMP::get_3jacobians_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &error_joints){
+
+    int total_pose;
+    int num_points_human = points_human.rows();
+    // n_dim should be equal to 3
+    int n_dim = points_human.cols();
+
+    // std::cout << "n_dim    eh   " << n_dim << std::endl;
+
+    counter = counter + 1;
+
+    if(num_points_human%num_joints_per_pose != 0){
+        throw std::runtime_error("The number of points for the human pose is not 9 (the expected value)");
+    }
+    else{
+        total_pose = int(num_points_human/num_joints_per_pose);
+    }
+
+    // TODO: I NEED TO PASS ALL THE HUMAN_POINTS TO DQ FORM
+    // ACTUALLY, I DONT NEED (just turn to DQ whenever necessary)
+    // But I still need to think on how I am going to do that
+
+    double d_min_arm = 1e6, d_min_torso = 1e6, d_min_head = 1e6;
+    int i_min_arm = -1, i_min_torso = -1, i_min_head = -1;
+    DQ point;
+    int i;
+
+    // std::cout << "HMP   AQUI 0  " << std::endl;
+
+    for(i=0; i <num_points_human; i++){
+        
+        point = DQ(points_human.row(i));
+        double dist_p = double(norm(t - point));
+        dist_p = dist_p - K_error*error_joints[i];
+
+        // If we are talking about the head
+        if(i%num_joints_per_pose == 2){
+            dist_p = dist_p - d_safe_head;
+            if(dist_p < d_min_head){
+                i_min_head = i;
+                d_min_head = dist_p;
+            }
+        } 
+        // If we are talking about the torso
+        else if(i%num_joints_per_pose <= 4){
+            dist_p = dist_p - d_safe_torso;
+            if(dist_p < d_min_torso){
+                i_min_torso = i;
+                d_min_torso = dist_p;
+            }
+        }
+        // If we are talking about the arms
+        else{
+            dist_p = dist_p - d_safe_arm;
+            if(dist_p < d_min_arm){
+                i_min_arm = i;
+                d_min_arm = dist_p;
+            }
+        }
+    }
+
+    int i_min[3] = {i_min_arm, i_min_torso, i_min_head};
+    
+    int dim_space = franka.get_dim_configuration_space();
+    MatrixXd Jacobian(3,dim_space);
+    VectorXd d_error(dim_space);
+
+    MatrixXd Jacobian_aux;
+    VectorXd d_error_aux;
+    
+    // Run 3 times: for the arms, torso, and head
+    for(i=0; i<3; i++){
+        std::tie(Jacobian_aux, d_error_aux) = choose_Jacobian(franka, Jt, t, points_human, i_min[i]);
+        Jacobian.row(i) << Jacobian_aux;
+        d_error_aux[i] = d_error_aux[0];
+    }
+    return std::make_tuple(Jacobian, d_error); 
+}
+
+std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, int i_min){
+    
     int p_min = i_min%num_joints_per_pose;
     int pose_min = int(i_min/num_joints_per_pose);
+
+    // n_dim should be equal to 3
+    // Or I could just use num_dim
+    int n_dim = points_human.cols();
 
     // Now we already have the closest point
     // Next step is to check which joint is this point
@@ -251,10 +337,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialMa
     if(check_plane == 1){
         std::tie(decide_plane, plane) = check_get_plane(points_plane, t);
 
-        
-
         if(decide_plane == 1){
-
             // Get the distance to the plane
             DQ n_plane  = P(plane);
             DQ d_plane = D(plane);
@@ -350,11 +433,9 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialMa
             return std::make_tuple(jacobian, d_error);
         }
     }
-
     // std::cout << "HMP  AQUI 3  " << std::endl;
 
     // If the code reaches here, then we have the only the point to take in account
-
     // Use only the point if the others are not correct, and to that we calculate the jacobian        
     MatrixXd jacobian = franka.point_to_point_distance_jacobian(Jt, t, DQ(point_closer));
 
