@@ -14,7 +14,11 @@ And I noticed some things that I need to think how I solve them
 
 3 - I NEED to take in account that the robot base is not in the (0,0,0) postion (DONE, I think)
 
-4 - I NEED to take in account the variance of the points!!! 
+4 - I NEED to take in account the variance of the points!!! (I NEED TO TEST)
+
+5 - I NEED to change the Model VAE (the sample z). Right now it only considers z = z_mu, which is wrong.
+
+6 - I NEED TO TEST everything: the variance, the 3 jacobians and the stop of the robot.
 
 TODOs that are not a must (but would be good if I could implement them)
 

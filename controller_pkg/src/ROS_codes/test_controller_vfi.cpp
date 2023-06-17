@@ -380,6 +380,7 @@ int main(int argc, char **argv){
             try{
                 if(stop_robot == 1){
                     // u << VectorXd::Zero(n);
+                    // Probably it shouldn't be a runtime error, but okay. It is just to merge the stop_robt with the solver error
                     throw std::runtime_error("Something is blocking the camera");
                 }
                 else{
