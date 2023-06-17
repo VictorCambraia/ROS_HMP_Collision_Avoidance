@@ -75,7 +75,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::transform_camera_points_2matrix(std:
         VectorXd point_lab = change_ref_to_lab(point_camera, pose_camera);
         points_human.row(i) << point_lab[0], point_lab[1], point_lab[2];
     }
-        for(i=0; i<n_rows; i++){
+    for(i=0; i<n_rows; i++){
         point.clear();
         for(j=0; j<num_dim;j++){
             std::string substr;
@@ -87,6 +87,9 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::transform_camera_points_2matrix(std:
         double max_log_sigma = log_sigma.maxCoeff();
         error_joints[i] = std::exp(max_log_sigma);
     }
+    // if((counter/1000)%2 == 0){
+    //     std::cout << error_joints << std::endl;
+    // }
     return std::make_tuple(points_human, error_joints);
 }
 
@@ -219,9 +222,10 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_3jacobians_human(const DQ_Serial
 
     int i_min[3] = {i_min_arm, i_min_torso, i_min_head};
     
-    int dim_space = franka.get_dim_configuration_space();
+    // int dim_space = franka.get_dim_configuration_space();
+    int dim_space = Jt.cols();
     MatrixXd Jacobian(3,dim_space);
-    VectorXd d_error(dim_space);
+    VectorXd d_error(3);
 
     MatrixXd Jacobian_aux;
     VectorXd d_error_aux;
@@ -230,7 +234,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_3jacobians_human(const DQ_Serial
     for(i=0; i<3; i++){
         std::tie(Jacobian_aux, d_error_aux) = choose_Jacobian(franka, Jt, t, points_human, i_min[i]);
         Jacobian.row(i) << Jacobian_aux;
-        d_error_aux[i] = d_error_aux[0];
+        d_error[i] = d_error_aux[0];
     }
     return std::make_tuple(Jacobian, d_error); 
 }

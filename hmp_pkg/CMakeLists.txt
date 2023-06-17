@@ -206,6 +206,6 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-catkin_install_python(PROGRAMS src/get_pose_refactor.py src/HMP_with_translation.py
+catkin_install_python(PROGRAMS src/get_pose_refactor.py src/HMP_with_translation.py src/HMP_trans_continuous.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

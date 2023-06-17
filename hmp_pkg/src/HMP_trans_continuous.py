@@ -592,7 +592,9 @@ class HMP:
 
         # We also don't need to scale the log_sigma because there will be a constant in the future already scaling it up
         log_sigma_complete = log_sigma.reshape(50,24)
-        log_sigma_complete = np.hstack([np.zeros((log_sigma_complete.shape[0],3)),log_sigma_complete])
+        # log_sigma_complete = np.hstack([np.zeros((log_sigma_complete.shape[0],3)),log_sigma_complete])
+        # Since we are dealing with log_sigma, we should put -inf and not 0. So, lets use -99. exp(-99) is basically 0
+        log_sigma_complete = np.hstack([-99*np.ones((log_sigma_complete.shape[0],3)),log_sigma_complete])
 
         prediction_torso = prediction_torso.reshape(50,-1)
 

@@ -35,6 +35,8 @@ void cb_update_hmp(const std_msgs::String::ConstPtr& msg){
     // ROS_INFO("I heard: [%s]", msg->data.c_str());
     str_poses_human = msg->data.c_str();
     refresh_pose = 1;
+    
+    // std::cout << "The size is   " << str_poses_human.length()  << std::endl;
     // std::cout << str_poses_human.substr(0,100) << std::endl;
 }
 
@@ -257,9 +259,10 @@ int main(int argc, char **argv){
                 MatrixXd Jp_p_aux;
                 VectorXd d_error;
                 // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, points_hmp);
-                std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, poses_human, error_joints);
-                MatrixXd Jp_p(1,n);
-                Jp_p << Jp_p_aux, MatrixXd::Zero(1, n-1-joint_counter);
+                // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, poses_human, error_joints);
+                std::tie(Jp_p_aux, d_error) = J_hmp.get_3jacobians_human(franka, Jt,t, poses_human, error_joints);
+                MatrixXd Jp_p(Jp_p_aux.rows(),n);
+                Jp_p << Jp_p_aux, MatrixXd::Zero(Jp_p_aux.rows(), n-1-joint_counter);
 
                 // std::cout << "AQUI 5.5  " << std::endl;
 
@@ -274,7 +277,7 @@ int main(int argc, char **argv){
 
                 // Define now the inequalities regarding the VFI from the cube
                 MatrixXd Ap_p = -Jp_p;
-                VectorXd bp_p(1);
+                VectorXd bp_p(d_error.size());
                 bp_p << nd*d_error;
 
                 // Define now the inequalities regarding the VFI from the cube
@@ -392,18 +395,24 @@ int main(int argc, char **argv){
             }
             catch(std::exception& e){
                 std::cout << e.what() << std::endl;
+                std::cout << "HEREEEE " << std::endl;
 
-                A.resize(W_q.rows() + W_vel.rows(), A_copy.cols());
-                b.resize(w_q.size() + w_vel.size());
+                MatrixXd A_stop;
+                VectorXd b_stop;
 
-                A << W_q, W_vel;
-                b << w_q, w_vel;
+                A_stop.resize(W_q.rows() + W_vel.rows(), W_q.cols());
+                b_stop.resize(w_q.size() + w_vel.size());
+
+                A_stop << W_q, W_vel;
+                b_stop << w_q, w_vel;
+
+                // Maybe add the inequality regarding the floor....
 
                 // Update the linear inequalities in the controller
                 translation_controller.set_inequality_constraint(A, b);
                 // Get the next control signal [rad/s]
-                // We put as objective the current pose, so the robot try to stop
-                u << translation_controller.compute_setpoint_control_signal(q,vec8(x));  
+                // We put as objective the current position, so the robot try to stop
+                u << translation_controller.compute_setpoint_control_signal(q,vec4(t));  
             }
             
             // Move the robot

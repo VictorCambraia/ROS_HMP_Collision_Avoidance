@@ -9,6 +9,7 @@ void chatterCallback(const std_msgs::String::ConstPtr& msg){
     // ROS_INFO("I heard: [%s]", msg->data.c_str());
     str_poses_human = msg->data.c_str();
     refresh_pose = 1;
+    std::cout << "Length eh " << str_poses_human.length() << std::endl;
     std::cout << str_poses_human.substr(0,100) << std::endl;
 }
 
