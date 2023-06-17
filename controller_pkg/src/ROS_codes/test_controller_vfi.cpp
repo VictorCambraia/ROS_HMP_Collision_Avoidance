@@ -224,14 +224,14 @@ int main(int argc, char **argv){
             int n = franka.get_dim_configuration_space();
             int joint_counter; //aux variable for the for
             // Iterate it for every joint of the robot
-            DQ t;
+            DQ t, x;
             for(joint_counter = n-3; joint_counter<n; joint_counter++){
 
                 MatrixXd Jx = franka.pose_jacobian(q,joint_counter);
 
                 // std::cout << "AQUI 4  " << std::endl;
 
-                DQ x = franka.fkm(q, joint_counter);
+                x = franka.fkm(q, joint_counter);
                 t = translation(x);
 
                 // Get the robot's translation Jacobian
@@ -375,23 +375,34 @@ int main(int argc, char **argv){
 
             // std::cout << "AQUI 13  " << std::endl;
 
-            // Update the linear inequalities in the controller
-            translation_controller.set_inequality_constraint(A, b);
-
             VectorXd u(n);
             // If there is some error/exception, mainly regarding the solver not finding a solution...
             try{
                 if(stop_robot == 1){
-                    u << VectorXd::Zero(n);
+                    // u << VectorXd::Zero(n);
+                    throw std::runtime_error("Something is blocking the camera");
                 }
                 else{
-                  // Get the next control signal [rad/s]
-                u << translation_controller.compute_setpoint_control_signal(q,vec4(td));  
+                    // Update the linear inequalities in the controller
+                    translation_controller.set_inequality_constraint(A, b);
+                    // Get the next control signal [rad/s]
+                    u << translation_controller.compute_setpoint_control_signal(q,vec4(td));  
                 } 
             }
             catch(std::exception& e){
                 std::cout << e.what() << std::endl;
-                u << VectorXd::Zero(n);
+
+                A.resize(W_q.rows() + W_vel.rows(), A_copy.cols());
+                b.resize(w_q.size() + w_vel.size());
+
+                A << W_q, W_vel;
+                b << w_q, w_vel;
+
+                // Update the linear inequalities in the controller
+                translation_controller.set_inequality_constraint(A, b);
+                // Get the next control signal [rad/s]
+                // We put as objective the current pose, so the robot try to stop
+                u << translation_controller.compute_setpoint_control_signal(q,vec8(x));  
             }
             
             // Move the robot
