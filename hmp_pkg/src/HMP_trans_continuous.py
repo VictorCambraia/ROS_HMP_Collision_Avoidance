@@ -388,7 +388,7 @@ class HMP:
         for i in range(log_sigma.shape[0]):
             msg = msg + "{:.4f}".format(log_sigma[i]) + ","
     
-        print(msg)
+        # print(msg)
         return msg
         
 
