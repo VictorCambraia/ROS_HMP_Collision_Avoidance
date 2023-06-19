@@ -82,6 +82,15 @@ int main(int argc, char **argv){
     translation_controller.set_gain(5);
     translation_controller.set_damping(0.05);
     translation_controller.set_control_objective(DQ_robotics::Translation);
+
+    // LAST TRY!!!
+    DQ_QPOASESSolver solver_stop;
+    DQ_ClassicQPController pose_controller(&franka, &solver_stop);
+
+    pose_controller.set_gain(1);
+    pose_controller.set_damping(1);
+    pose_controller.set_control_objective(DQ_robotics::Pose);
+
     // controller.set_stability_threshold(0.00001);
 
     // VectorXd q_min = VectorXd(7);
@@ -148,7 +157,8 @@ int main(int argc, char **argv){
     VectorXd error_joints = VectorXd::Zero(n_rows);
 
     // Define the pose of the camera
-    DQ pose_camera = DQ(1);
+    // DQ pose_camera = DQ(1);
+    DQ pose_camera = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
 
     // Initialize the variables that we be used later
     double tau = 0.01; //It works as a delta_t
@@ -208,6 +218,19 @@ int main(int argc, char **argv){
                 std::tie(poses_human, error_joints) = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
                 refresh_pose = 0;
                 // std::cout << "AQUIII 2  " << std::endl;
+
+                // TRY TO SEND THE POSE TO THE COPPELIASIM
+                // Turn this into a function later
+                vi.set_object_translation("Torso", DQ(poses_human.row(0)));
+                vi.set_object_translation("Neck", DQ(poses_human.row(1)));
+                vi.set_object_translation("Head", DQ(poses_human.row(2)));
+                vi.set_object_translation("Left_Shoulder", DQ(poses_human.row(3)));
+                vi.set_object_translation("Left_Elbow", DQ(poses_human.row(4)));
+                vi.set_object_translation("Left_Hand", DQ(poses_human.row(5)));
+                vi.set_object_translation("Right_Shoulder", DQ(poses_human.row(6)));
+                vi.set_object_translation("Right_Elbow", DQ(poses_human.row(7)));
+                vi.set_object_translation("Right_Hand", DQ(poses_human.row(8)));
+
             }
 
 
@@ -383,10 +406,11 @@ int main(int argc, char **argv){
             try{
                 if(stop_robot == 1){
                     // u << VectorXd::Zero(n);
-                    // Probably it shouldn't be a runtime error, but okay. It is just to merge the stop_robt with the solver error
+                    // Probably it shouldn't be a runtime error, but okay. It is just to merge the stop_robt with the solver error 
                     throw std::runtime_error("Something is blocking the camera");
                 }
                 else{
+                
                     // Update the linear inequalities in the controller
                     translation_controller.set_inequality_constraint(A, b);
                     // Get the next control signal [rad/s]
@@ -395,11 +419,11 @@ int main(int argc, char **argv){
             }
             catch(std::exception& e){
                 std::cout << e.what() << std::endl;
-                std::cout << "HEREEEE " << std::endl;
+                std::cout << "HEREEEE \n\n HEREEEEE '\n\n" << std::endl;
 
-                MatrixXd A_stop;
-                VectorXd b_stop;
-
+                MatrixXd A_stop(1,1);
+                VectorXd b_stop(1);
+                
                 A_stop.resize(W_q.rows() + W_vel.rows(), W_q.cols());
                 b_stop.resize(w_q.size() + w_vel.size());
 
@@ -407,12 +431,11 @@ int main(int argc, char **argv){
                 b_stop << w_q, w_vel;
 
                 // Maybe add the inequality regarding the floor....
-
                 // Update the linear inequalities in the controller
-                translation_controller.set_inequality_constraint(A, b);
+                pose_controller.set_inequality_constraint(A_stop, b_stop);
                 // Get the next control signal [rad/s]
                 // We put as objective the current position, so the robot try to stop
-                u << translation_controller.compute_setpoint_control_signal(q,vec4(t));  
+                u << pose_controller.compute_setpoint_control_signal(q,vec8(x));  
             }
             
             // Move the robot

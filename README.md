@@ -23,6 +23,8 @@ And I noticed some things that I need to think how I solve them
 7 - I NEED to improve the blocking camera strategy. Which actually means another refactor of the code.
 The best would be: if there is really someone (if the msg is published), then say stop_robot == 0. Else, check for covered or not
 
+8 - SOLVE this issue RuntimeError: out of range value for argument "y". I basically need to put a try and catch on this part of the code
+
 TODOs that are not a must (but would be good if I could implement them)
 
 -> Search for others datasets (I actually dont think I will have enough time for this)
