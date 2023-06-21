@@ -18,17 +18,29 @@ project(cpp_main_codes)
 #     qpOASES
 # )
 
-# add_executable(controller_test
-#     controller_test.cpp
-#     )
+add_executable(controller_test
+    controller_test.cpp
+    )
 
 
-# TARGET_LINK_LIBRARIES(controller_test
-#     pthread
-#     dqrobotics
-#     dqrobotics-interface-vrep
-#     qpOASES
-# )
+TARGET_LINK_LIBRARIES(controller_test
+    pthread
+    dqrobotics
+    dqrobotics-interface-vrep
+    qpOASES
+)
+
+add_executable(test_controller_before_robot
+    test_controller_before_robot.cpp
+    )
+
+
+TARGET_LINK_LIBRARIES(test_controller_before_robot
+    pthread
+    dqrobotics
+    dqrobotics-interface-vrep
+    qpOASES
+)
 
 add_executable(controller_human_avoidance
     controller_human_avoidance.cpp

@@ -83,7 +83,7 @@ int main(int argc, char **argv){
     translation_controller.set_damping(0.05);
     translation_controller.set_control_objective(DQ_robotics::Translation);
 
-    // LAST TRY!!!
+    // LAST TRY!!! WORKED
     DQ_QPOASESSolver solver_stop;
     DQ_ClassicQPController pose_controller(&franka, &solver_stop);
 
@@ -99,12 +99,22 @@ int main(int argc, char **argv){
     // VectorXd q_max = VectorXd(7);
     // q_max << 2.8973,    1.7628,    2.8973,  -0.0698,    2.8973,    3.7525,    2.8973;
 
-    // Define some limits regarding the position and velocity of the robot joints
-    VectorXd q_minus = -(pi/2.0)*VectorXd::Ones(7);
-    VectorXd q_plus = (pi/2.0)*VectorXd::Ones(7);
+    // // Define some limits regarding the position and velocity of the robot joints
+    // VectorXd q_minus = -(pi/2.0)*VectorXd::Ones(7);
+    // VectorXd q_plus = (pi/2.0)*VectorXd::Ones(7);
 
-    VectorXd vel_minus = -2*VectorXd::Ones(7);
-    VectorXd vel_plus = 2*VectorXd::Ones(7);
+    // VectorXd vel_minus = -2*VectorXd::Ones(7);
+    // VectorXd vel_plus = 2*VectorXd::Ones(7);
+
+    VectorXd q_minus(7);
+    VectorXd q_plus(7);
+    q_minus << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
+    q_plus << 2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973;
+
+    VectorXd vel_minus(7);
+    VectorXd vel_plus(7);
+    vel_minus << -2.1750, -2.1750, -2.1750, -2.1750, -2.6100, -2.6100, -2.6100;
+    vel_plus << 2.1750, 2.1750, 2.1750, 2.1750, 2.6100, 2.6100, 2.6100;
 
     // ------------------- NOT USED NOW --------------------//
 
@@ -345,7 +355,6 @@ int main(int argc, char **argv){
                     A << A_copy, A_aux;
                 }
                 
-
                 // std::cout << "AQUI 10.5  " << std::endl;
 
                 if(b_copy.size() == 0){

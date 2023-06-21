@@ -66,6 +66,15 @@ int main(void)
     DQ rd = cos(ang/2) + sin(ang/2)*direction;
     DQ xd = rd + 0.5*E_*td*rd;
 
+    std::array<double, 7> q_start{{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+    VectorXd qd(7);
+
+    for(int i=0;i<7;i++){
+        qd[i] = q_start[i];
+    }
+    xd = franka.fkm(qd);
+
+
     double tau = 0.01;
     
     VectorXd e = VectorXd::Zero(8);
@@ -105,7 +114,7 @@ int main(void)
     std::cout << "Control Finished" << std::endl;
 
     std::cout << "Stopping V-REP simulation..." << std::endl;
-    vi.stop_simulation();
-    vi.disconnect();
+    // vi.stop_simulation();
+    // vi.disconnect();
     return 0;
 }
