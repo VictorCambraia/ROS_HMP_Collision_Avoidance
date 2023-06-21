@@ -30,7 +30,7 @@ public:
     int num_dim;
     // Probably I should add another variable that would represent the number of joints in each pose
     int num_joints_per_pose;
-    // Parameter regarding the importance of the error_joints (related with the joint sigma)
+    // Parameter regarding the importance of the deviation_joints (related with the joint sigma)
     double K_error;
 
     // COnstructor
@@ -43,8 +43,8 @@ public:
     // This function as well
     VectorXd change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref);
     // MatrixXd transform_points_human2matrix(std::string& str_numbers);
-    std::tuple<MatrixXd, VectorXd> get_jacobian_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &error_joints);
-    std::tuple<MatrixXd, VectorXd> get_3jacobians_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &error_joints);
+    std::tuple<MatrixXd, VectorXd> get_jacobian_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &deviation_joints);
+    std::tuple<MatrixXd, VectorXd> get_3jacobians_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &deviation_joints);
     std::tuple<MatrixXd, VectorXd> choose_Jacobian(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, int i_min);
 
     std::tuple<int, DQ> check_get_plane(MatrixXd &points_plane, const DQ &t);

@@ -164,7 +164,7 @@ int main(int argc, char **argv){
     int n_rows = J_hmp.num_poses*J_hmp.num_joints_per_pose;
     int n_cols = J_hmp.num_dim;
     MatrixXd poses_human = 100*MatrixXd::Ones(n_rows, n_cols);
-    VectorXd error_joints = VectorXd::Zero(n_rows);
+    VectorXd deviation_joints = VectorXd::Zero(n_rows);
 
     // Define the pose of the camera
     // DQ pose_camera = DQ(1);
@@ -225,7 +225,7 @@ int main(int argc, char **argv){
             if(refresh_pose == 1){
                 // std::cout << "AQUIII 1  " << std::endl;
                 // Check if this is going to work
-                std::tie(poses_human, error_joints) = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
+                std::tie(poses_human, deviation_joints) = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
                 refresh_pose = 0;
                 // std::cout << "AQUIII 2  " << std::endl;
 
@@ -292,8 +292,8 @@ int main(int argc, char **argv){
                 MatrixXd Jp_p_aux;
                 VectorXd d_error;
                 // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, points_hmp);
-                // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, poses_human, error_joints);
-                std::tie(Jp_p_aux, d_error) = J_hmp.get_3jacobians_human(franka, Jt,t, poses_human, error_joints);
+                // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, poses_human, deviation_joints);
+                std::tie(Jp_p_aux, d_error) = J_hmp.get_3jacobians_human(franka, Jt,t, poses_human, deviation_joints);
                 MatrixXd Jp_p(Jp_p_aux.rows(),n);
                 Jp_p << Jp_p_aux, MatrixXd::Zero(Jp_p_aux.rows(), n-1-joint_counter);
 
