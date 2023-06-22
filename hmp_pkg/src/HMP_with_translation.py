@@ -596,7 +596,7 @@ class HMP:
 
         time_now4 = rospy.get_time()
 
-        # print(time_now4 - time_now3) 
+        print(time_now4 - time_now3) 
 
         return prediction, prediction_scaled
     

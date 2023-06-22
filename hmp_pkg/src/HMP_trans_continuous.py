@@ -318,6 +318,8 @@ class HMP:
 
         self.counter = 0
         self.timer_prev = rospy.get_time()
+        self.time_sec = 0
+        self.time_min = 0
 
         # INITIALIZATION REGARDING ROS PUBLISHER
         self.pub = rospy.Publisher('prediction_human', String, queue_size=50)
@@ -541,6 +543,7 @@ class HMP:
         # print(self.pose_matrix_normalized.shape)
 
         input_predict = self.pose_matrix_normalized.reshape(-1,1200)
+        input_torso_predict = self.torso_matrix.reshape(-1,150) # Also for the TORSO part
 
         # log_sigma is the error assoicated with the prediction
         if self.continuous_model:
@@ -552,32 +555,53 @@ class HMP:
             prediction = np.array(prediction[0])
             log_sigma = np.zeros(prediction.shape)
 
+        time_now4 = rospy.get_time() 
+        # if self.counter%20 == 0:
+        #     print(time_now4 - time_now3)
+        prediction_torso = self.model_torso([input_torso_predict, input_torso_predict])[0]
+        prediction_torso = np.array(prediction_torso)
+
 
         # AGORA COM O OFFSET FAZENDO UM TIPO DE FADED
         single_pose = np.array(input_predict[0,1176:])
         diff_single = prediction[:24] - single_pose
 
+        single_torso = np.array(input_torso_predict[0,147:])
+        diff_single_torso = prediction_torso[:3] - single_torso
+
         diff_faded = np.array([])
+        diff_faded_torso = np.array([])
         alpha = 1
         FADE_RATE = 0.95
         for j in range(50):
 
             diff_faded = np.append(diff_faded, alpha*diff_single)
+            diff_faded_torso = np.append(diff_faded_torso, alpha*diff_single_torso)
             alpha = alpha* FADE_RATE
 
         diff_faded = diff_faded.reshape(-1,1200)
+        diff_faded_torso = diff_faded_torso.reshape(-1,150)
 
         pred_faded = prediction - diff_faded
+        pred_faded_torso = prediction_torso - diff_faded_torso
 
         # Maybe comment this line later
         prediction = pred_faded
+        prediction_torso = pred_faded_torso
 
-        # Now for the TORSO part
-        input_torso_predict = self.torso_matrix.reshape(-1,150)
+        # # Now for the TORSO part
+        # input_torso_predict = self.torso_matrix.reshape(-1,150)
 
         # prediction = self.model.predict([input_predict, input_predict])[0]
-        prediction_torso = self.model_torso([input_torso_predict, input_torso_predict])[0]
-        prediction_torso = np.array(prediction_torso)
+
+        # Uncomment this line later
+        # prediction_torso = self.model_torso([input_torso_predict, input_torso_predict])[0]
+        # prediction_torso = np.array(prediction_torso)
+
+        time_now5 = rospy.get_time() 
+
+        # if self.counter%20 == 0:
+        #     print(time_now5 - time_now4)
 
         # Now, I will combine both predictions to get the entire prediction of the human body
         # SCALE THE POSE UP (VECTOR PREDICTION)
@@ -621,9 +645,9 @@ class HMP:
 
         # print(prediction.shape)
 
-        time_now4 = rospy.get_time()
-
-        # print(time_now4 - time_now3) 
+        time_now6 = rospy.get_time()
+        if self.counter%20 == 0:
+            print(time_now6 - time_now3) 
 
         return prediction, prediction_scaled, log_sigma_complete
     
@@ -634,8 +658,15 @@ class HMP:
 
         self.counter += 1
 
-        if self.counter % 1800 == 0:
+        if self.counter % 30 == 0:
+            print("    ", time_now - self.time_sec, "    ")
+            self.time_sec = time_now
+
+
+        if (self.counter-1) % 1800 == 0:
             print("\n\n\n\n\n\n \n\n PASSED 1 MINUTE      \n\n\n\n\n\n\n\n")   
+            print("    ", time_now - self.time_min, "    ")
+            self.time_min = time_now
 
         if self.counter % 1 == 0:
 
@@ -668,12 +699,10 @@ class HMP:
                 run_vae_decision = self.add_pose_matrix(self.last_pose, self.last_torso_real_coord)
                 # Manda rodar a previsão se a matriz tiver cheia
                 if run_vae_decision == 1:
-                    if self.counter %1 == 0:
-                        self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete = self.predict_motion()
-
-                    run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete)
-
+                        
+                    self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete = self.predict_motion()
                     self.publish_pose(self.last_prediction_scaled, self.last_log_sigma_complete)
+                    run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete)
 
                     if self.counter %100 == 0:
                         print("\n PREDICTION IS THE FOLLOWING  \n", self.last_prediction_scaled[0,24:27], "\n", self.last_prediction_scaled[0,1347:])
@@ -716,7 +745,7 @@ class HMP:
         time_now2 = rospy.get_time() 
 
         time_prev = self.timer_prev
-        self.timer_prev = time_now
+        self.timer_prev = time_now2
 
         # print(time_now2 - time_now)
 

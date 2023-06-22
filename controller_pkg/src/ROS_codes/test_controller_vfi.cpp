@@ -43,7 +43,7 @@ void cb_update_hmp(const std_msgs::String::ConstPtr& msg){
 void cb_stop_robot(const std_msgs::Int32::ConstPtr& msg){
     // ROS_INFO("I heard: [%s]", msg->data.c_str());
     stop_robot = int(msg->data);
-    std::cout << stop_robot << std::endl;
+    // std::cout << stop_robot << std::endl;
 }
 
 int main(int argc, char **argv){
@@ -168,7 +168,14 @@ int main(int argc, char **argv){
 
     // Define the pose of the camera
     // DQ pose_camera = DQ(1);
-    DQ pose_camera = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
+    // DQ pose_camera = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
+
+    // Define the pose of the camera
+    double ang_degree = -90;
+    DQ rotation_camera = cos(ang_degree/2*(pi/180)) + sin(ang_degree/2*(pi/180))*(1*k_);
+    DQ translation_camera = -0.3*i_ -0.35*j_ + 0.28*k_;
+    // pose_camera_ = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
+    DQ pose_camera = rotation_camera + 0.5*E_*translation_camera*rotation_camera;
 
     // Initialize the variables that we be used later
     double tau = 0.01; //It works as a delta_t
@@ -189,6 +196,10 @@ int main(int argc, char **argv){
     DQ td; // the desired position of the robot
     int N = 100; // Number of times that the robot will change the td
 
+    int count_refresh = 0;
+    ros::Time time_ros;
+    double time_now, time_prev = 0, time_diff;
+
     // Define the goals of the robot (td)
     for(i=0; i<N; i++){
         if(decide_td == 0){
@@ -203,11 +214,13 @@ int main(int argc, char **argv){
             td = -0.4*i_ + 0.6*j_ + 0.3*k_;
             decide_td = 0;
         }
+        i = 1;
+        td = 0.6*i_ + 0.0*j_ + 0.4*k_;
         
         // the translation error
         VectorXd e = VectorXd::Zero(4);
         e[0] = 1;
-        std::cout << "Starting Control Loop..." << std::endl;
+        // std::cout << "Starting Control Loop..." << std::endl;
 
         counter = 0;
 
@@ -223,6 +236,15 @@ int main(int argc, char **argv){
             }
 
             if(refresh_pose == 1){
+                
+                if(count_refresh%60 == 0){
+                    time_now = ros::Time::now().toSec();
+                    time_diff = time_now - time_prev;
+                    std::cout << "  \n" << time_diff << "      " << time_now << "   \n";
+                    time_prev = time_now;
+                }
+                count_refresh++;
+
                 // std::cout << "AQUIII 1  " << std::endl;
                 // Check if this is going to work
                 std::tie(poses_human, deviation_joints) = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
@@ -235,10 +257,10 @@ int main(int argc, char **argv){
                 vi.set_object_translation("Neck", DQ(poses_human.row(1)));
                 vi.set_object_translation("Head", DQ(poses_human.row(2)));
                 vi.set_object_translation("Left_Shoulder", DQ(poses_human.row(3)));
-                vi.set_object_translation("Left_Elbow", DQ(poses_human.row(4)));
-                vi.set_object_translation("Left_Hand", DQ(poses_human.row(5)));
-                vi.set_object_translation("Right_Shoulder", DQ(poses_human.row(6)));
-                vi.set_object_translation("Right_Elbow", DQ(poses_human.row(7)));
+                vi.set_object_translation("Right_Shoulder", DQ(poses_human.row(4)));
+                vi.set_object_translation("Left_Elbow", DQ(poses_human.row(5)));
+                vi.set_object_translation("Right_Elbow", DQ(poses_human.row(6)));
+                vi.set_object_translation("Left_Hand", DQ(poses_human.row(7)));
                 vi.set_object_translation("Right_Hand", DQ(poses_human.row(8)));
 
             }
@@ -285,7 +307,7 @@ int main(int argc, char **argv){
 
                 // std::cout << "AQUI 5  " << std::endl;
                 if((J_hmp.counter+1)%2000 == 0){
-                    std::cout << "        JOINT NUMERO      " << joint_counter << std::endl;
+                    // std::cout << "        JOINT NUMERO      " << joint_counter << std::endl;
                 }
                 
                 // The Jacobian for one or more poses
@@ -419,6 +441,10 @@ int main(int argc, char **argv){
                     throw std::runtime_error("Something is blocking the camera");
                 }
                 else{
+
+                    if(counter%4000 == 0){
+                        ROS_INFO_STREAM(" A AMTRIX A EH " << A << " \n");
+                    }
                 
                     // Update the linear inequalities in the controller
                     translation_controller.set_inequality_constraint(A, b);

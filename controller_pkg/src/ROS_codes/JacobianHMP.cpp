@@ -324,13 +324,13 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
     VectorXd point_closer = points_human.row(i_min);
     double dist_min = double(norm(t - DQ(point_closer)));   
 
-    // For printing and debug purposes  
-    if(counter%2000 == 0){
-        // std::cout << point_closer << std::endl;
-        // std::cout << i_min << std::endl;
-        std::cout << " O ponto mais proximo eh   " << p_min << std::endl;
-        std::cout << "Dist min eh    " << dist_min << std::endl;
-    }
+    // // For printing and debug purposes  
+    // if(counter%2000 == 0){
+    //     // std::cout << point_closer << std::endl;
+    //     // std::cout << i_min << std::endl;
+    //     std::cout << " O ponto mais proximo eh   " << p_min << std::endl;
+    //     std::cout << "Dist min eh    " << dist_min << std::endl;
+    // }
 
     int decide_plane;
     DQ plane;
@@ -356,7 +356,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             MatrixXd jacobian = franka.point_to_plane_distance_jacobian(Jt, t, plane);
         
             // AQUII DELETE LATER
-            if(counter%2000 == 0){
+            if(counter%10000 == 0){
             std::cout << "PLANE" << std::endl;
             }
             return std::make_tuple(jacobian, d_error);     
@@ -382,7 +382,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             d_error << d_error_line;
 
             // AQUII DELETE LATER
-            if(counter%2000 == 0){
+            if(counter%10000 == 0){
             std::cout << "LINE - 1 AVAILABLE" << std::endl;
             }
 
@@ -432,7 +432,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             d_error << d_error_line;
 
             // AQUII DELETE LATER
-            if(counter%2000 == 0){
+            if(counter%10000 == 0){
             std::cout << "LINE - 2 AVAILABLE" << std::endl;
             }
 
@@ -453,7 +453,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
     d_error << d_error_p;
 
     // AQUII DELETE LATER
-    if(counter%2000 == 0){
+    if(counter%10000 == 0){
         std::cout << "  POINT  " << std::endl;
     }
     return std::make_tuple(jacobian, d_error);
