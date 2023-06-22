@@ -47,6 +47,8 @@ JacobianHMP::JacobianHMP(const VectorXd &d_safe, double K_error_value){
 // I should  actually delete it!!!
 void JacobianHMP::add_counter(int value){
     counter = counter + value;
+    // How I didnt know about that....
+    // this->counter = this->counter + value;
 }
 
 // This function should not be here (there is not relation with the jacobian)
