@@ -646,8 +646,8 @@ class HMP:
         # print(prediction.shape)
 
         time_now6 = rospy.get_time()
-        if self.counter%20 == 0:
-            print(time_now6 - time_now3) 
+        # if self.counter%20 == 0:
+        #     print(time_now6 - time_now3) 
 
         return prediction, prediction_scaled, log_sigma_complete
     
@@ -658,15 +658,15 @@ class HMP:
 
         self.counter += 1
 
-        if self.counter % 30 == 0:
-            print("    ", time_now - self.time_sec, "    ")
-            self.time_sec = time_now
+        # if self.counter % 30 == 0:
+        #     print("    ", time_now - self.time_sec, "    ")
+        #     self.time_sec = time_now
 
 
         if (self.counter-1) % 1800 == 0:
             print("\n\n\n\n\n\n \n\n PASSED 1 MINUTE      \n\n\n\n\n\n\n\n")   
-            print("    ", time_now - self.time_min, "    ")
-            self.time_min = time_now
+            # print("    ", time_now - self.time_min, "    ")
+            # self.time_min = time_now
 
         if self.counter % 1 == 0:
 
@@ -704,15 +704,16 @@ class HMP:
                     self.publish_pose(self.last_prediction_scaled, self.last_log_sigma_complete)
                     run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete)
 
-                    if self.counter %100 == 0:
-                        print("\n PREDICTION IS THE FOLLOWING  \n", self.last_prediction_scaled[0,24:27], "\n", self.last_prediction_scaled[0,1347:])
+                    # if self.counter %100 == 0:
+                        # print("\n PREDICTION IS THE FOLLOWING  \n", self.last_prediction_scaled[0,24:27], "\n", self.last_prediction_scaled[0,1347:])
                         # self.skel.plot_skeleton_Full_Window(self.skel.torso, self.last_prediction_scaled[0,675:702],1)
                         # self.skel.plot_skeleton_Full_Window2(self.skel.torso, self.last_prediction_scaled[0,:27], self.last_prediction_scaled[0,1323:])
 
 
                     # Call the evaluation of the prediction if the matrix is full
                     if run_evaluate_prediction == 1:
-                        if self.counter % 20 == 0:
+                        
+                        if self.counter % 90 == 0:
                             mpe = self.evaluate_prediction()
                         
                             # print("\n\n MPE IS HERE  ",mpe, "\n\n")
@@ -732,14 +733,14 @@ class HMP:
                                 test = np.append(test, single_pose)
 
                             test = test.reshape(-1,1200)
-                            # prediction = self.model.predict([test, test])[0]
+                            prediction = self.model.predict([test, test])[0]
 
                             error_static = calculate_MSE(test, self.pose_matrix_normalized.reshape(1,-1))
-                            # error_predicted = calculate_MSE(test, prediction)
+                            error_predicted = calculate_MSE(test, prediction)
 
                             # print(" SUPOSE STOPPED PERSON (STATIC ERROR)\n\n",error_static, "\n\n")
 
-                            # print(" SUPOSE STOPPED PERSON (ERROR PREDICTED)\n\n",error_predicted, "\n\n")
+                            print(" SUPOSE STOPPED PERSON (ERROR PREDICTED)\n\n",error_predicted, "\n\n")
 
 
         time_now2 = rospy.get_time() 

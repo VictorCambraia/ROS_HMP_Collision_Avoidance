@@ -173,7 +173,7 @@ int main(int argc, char **argv){
     // Define the pose of the camera
     double ang_degree = -90;
     DQ rotation_camera = cos(ang_degree/2*(pi/180)) + sin(ang_degree/2*(pi/180))*(1*k_);
-    DQ translation_camera = -0.35*i_ -0.2*j_ + 0.23*k_;
+    DQ translation_camera = -0.00*i_ -0.25*j_ + 0.28*k_;
     // pose_camera_ = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
     DQ pose_camera = rotation_camera + 0.5*E_*translation_camera*rotation_camera;
 
