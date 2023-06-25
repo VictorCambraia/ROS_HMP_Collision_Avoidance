@@ -377,28 +377,16 @@ class estimate_pose:
         self.counter = self.counter + 1
 
         if self.counter % 1800 == 0:
-
             print("\n\n PASSED 1 MINUTE \n\n ")
 
         self.color_frame, self.depth_frame, self.color_image, self.skel_depth_image = self.get_camera_frame()
 
         if self.counter % 1 == 0:
-
             self.result_joints, self.skel_image = self.skel.get_skeleton(self.color_image)
 
             if self.result_joints.pose_world_landmarks == None:
                 print("NOBODY DETECTED IN THE IMAGE")
-                if self.counter % self.period_pub_stop == 0:
-                    self.check_camera_covered(self.depth_frame)
-                # Reset the test_MSE variable
-                self.test_MSE = 0
-                return
-            else:
-                if self.counter % self.period_pub_stop == 0:
-                    #Publish here saying that the robot should not stop
-                    stop_robot = 0
-                    self.pub_stop_robot.publish(stop_robot)
-                
+                return -1
 
             self.u_pose, self.visibility = self.skel.upper_pose_from_landmark(self.result_joints.pose_world_landmarks.landmark)
 
@@ -406,13 +394,12 @@ class estimate_pose:
             scale_factor = self.get_scale_factor(self.visibility, self.result_joints, self.skel, better_joints=0)
             if scale_factor == 0:
                 print("Scale factor was 0, and that cannot happen")
-                self.test_MSE = 0
-                return
-
+                return -2
             # print("\n SCALE FACTOR   ", scale_factor, "\n")
 
-            # TODO
+            # TODO Já não lembro do que esse TODO trata pra ser sincero
             # AQUII (Não usar o tal do deepcopy -> Usar apenas nparray pra pose (vai facilitar minha vida))
+
             # Scale the pose up based on the scale_factor obtained
             self.pose_torso_ref_aux = self.skel.scale_pose_up(self.skel.torso, copy.deepcopy(self.u_pose), scale_factor)
 
@@ -420,25 +407,32 @@ class estimate_pose:
             self.pose_torso_ref = self.skel.center_pose_torso(self.skel.torso, copy.deepcopy(self.pose_torso_ref_aux))
 
             self.torso_real_coord = self.get_torso_real_coord(self.visibility, self.result_joints, self.skel, self.pose_torso_ref, self.occlusion_shoulder)
+            if self.torso_real_coord.size == 0:
+                print("Couldnt get the torso real coordinate")
+                return -3
 
             self.pose_lab_ref = self.get_pose_lab_ref(self.torso_real_coord, self.pose_torso_ref, self.skel)
+            if self.torso_real_coord.size == 0:
+                print("Couldnt get the pose in the lab reference frame (global ref)")
+                return -4
 
             # Check if our previous pose is similar or not (if it is not, then we have an error)
             if self.test_MSE == 1:
                 check = self.skel.check_pose_diff(self.pose_lab_ref, self.last_pose_lab_ref)
                 
                 if check == -1:
-                    self.test_MSE = 0
-                    # print("This pose is very different from the previous one. There is some error")
-                    return
+                    print("This pose is very different from the previous one. There is some error")
+                    return -5
 
-            error = self.publish_pose(self.pose_torso_ref, self.torso_real_coord)
+            self.publish_pose(self.pose_torso_ref, self.torso_real_coord)
 
-            if error == -1:
-                self.test_MSE = 0
-            else:
-                self.last_pose_lab_ref = self.pose_lab_ref
-                self.test_MSE = 1
+            if self.counter % self.period_pub_stop == 0:
+                #Publish here saying that the robot should not stop
+                stop_robot = 0
+                self.pub_stop_robot.publish(stop_robot)
+
+            self.last_pose_lab_ref = self.pose_lab_ref
+            self.test_MSE = 1
 
             # cv2.imshow("Depth with skeleton", self.skel_depth_image)
             cv2.imshow("Color with skeleton", self.skel_image)
@@ -457,7 +451,10 @@ class estimate_pose:
             #     # print(self.pose_torso_ref_aux, "\n\n")
             #     print(self.pose_torso_ref, "\n\n")
             #     print(self.pose_lab_ref)
-            #     # self.skel.plot_skeleton_Full_Window(self.skel.torso, self.pose_torso_ref, 1)        
+            #     # self.skel.plot_skeleton_Full_Window(self.skel.torso, self.pose_torso_ref, 1)     
+
+            # Everything went well (A person was in fact detected)
+            return 0   
 
     # Get the latest frames from RealSense Camera
     def get_camera_frame(self):
@@ -505,7 +502,7 @@ class estimate_pose:
     def publish_pose(self, pose_torso_ref, torso_real_coord):
 
         msg_pose = self.create_msg_pose(pose_torso_ref, torso_real_coord)
-
+        # This if is kind of useless right now
         if msg_pose == None:
             return -1
 
@@ -513,14 +510,13 @@ class estimate_pose:
         return 0
 
     def create_msg_pose(self, pose, torso_coord):
-
+        
+        # This if is kind of useless right now
         if torso_coord.size == 0 or pose.size == 0:
-
             print("We dont have a torso coord or pose to send")
             return 
 
         msg = ""
-
         for i in range(9):
             for j in range(3):
                 # value = str(pose[i][j])
@@ -541,10 +537,6 @@ class estimate_pose:
         return msg
 
     def get_pose_lab_ref(self, torso_real_coord, pose_torso_ref, skel: Skeleton):
-
-        if torso_real_coord.size == 0:
-            print("Couldnt get the pose in the lab reference (global ref)")
-            return np.array([])
 
         pose_lab_ref = skel.translate_joint(skel.torso, copy.deepcopy(pose_torso_ref), -1*torso_real_coord)
         return pose_lab_ref
@@ -608,40 +600,45 @@ class estimate_pose:
     # Get the coordinates of a point in the real world (x,y,z) given the coordinates of the pixel of that point 
     def get_3Dpoint_from_pixel(self, pixel_coordinates):
 
-        # The pixel_coordinates that we receive varies from 0 to 1 (it is normalized). So, we need to multiply by the length (pixels) in x and y
-        pixel_coord = [int(pixel_coordinates.x * self.image_width), int(pixel_coordinates.y * self.image_height)]
+        try:
+            # The pixel_coordinates that we receive varies from 0 to 1 (it is normalized). So, we need to multiply by the length (pixels) in x and y
+            pixel_coord = [int(pixel_coordinates.x * self.image_width), int(pixel_coordinates.y * self.image_height)]
+            
+            depth_pixel = rs.rs2_project_color_pixel_to_depth_pixel(
+                    self.depth_frame.get_data(), self.depth_scale,
+                    self.depth_min, self.depth_max,
+                    self.depth_intrin, self.color_intrin, self.depth_to_color_extrin, self.color_to_depth_extrin, pixel_coord)
+            
+            x_depth_pixel, y_depth_pixel = depth_pixel
+
+            # TODO CHECK THE RANGE OF Y (SOMETIMES I GET A PROBLEM REGADING THIS RANGE)
+
+            x_depth_pixel = int(x_depth_pixel)
+            y_depth_pixel = int(y_depth_pixel)
+
+            if x_depth_pixel == -1 or y_depth_pixel == -1:
+                print("The depth_pixel couldnt be calculated/finded")
+                return
+
+            self.skel_depth_image = cv2.circle(self.skel_depth_image, (x_depth_pixel, y_depth_pixel), radius=8, color=(0, 0, 255), thickness=-1)
+            
+            depth = self.depth_frame.get_distance(x_depth_pixel, y_depth_pixel)
+
+            if depth == float(0):
+                print("The depth calculated was 0")
+                return 
+
+            depth_point = rs.rs2_deproject_pixel_to_point(self.depth_intrin, [x_depth_pixel, y_depth_pixel], depth)
+
+            x_depth_point, y_depth_point, z_depth_point = depth_point
+
+            oriented_depth_point = [x_depth_point, -y_depth_point, z_depth_point]
+
+            return oriented_depth_point
         
-        depth_pixel = rs.rs2_project_color_pixel_to_depth_pixel(
-                self.depth_frame.get_data(), self.depth_scale,
-                self.depth_min, self.depth_max,
-                self.depth_intrin, self.color_intrin, self.depth_to_color_extrin, self.color_to_depth_extrin, pixel_coord)
-        
-        x_depth_pixel, y_depth_pixel = depth_pixel
-
-        # TODO CHECK THE RANGE OF Y (SOMETIMES I GET A PROBLEM REGADING THIS RANGE)
-
-        x_depth_pixel = int(x_depth_pixel)
-        y_depth_pixel = int(y_depth_pixel)
-
-        if x_depth_pixel == -1 or y_depth_pixel == -1:
-            print("The depth_pixel couldnt be calculated/finded")
+        except:
+            print("An exception occured when getting the 3D coordinates of a point")
             return
-
-        self.skel_depth_image = cv2.circle(self.skel_depth_image, (x_depth_pixel, y_depth_pixel), radius=8, color=(0, 0, 255), thickness=-1)
-        
-        depth = self.depth_frame.get_distance(x_depth_pixel, y_depth_pixel)
-
-        if depth == float(0):
-            print("The depth calculated was 0")
-            return 
-
-        depth_point = rs.rs2_deproject_pixel_to_point(self.depth_intrin, [x_depth_pixel, y_depth_pixel], depth)
-
-        x_depth_point, y_depth_point, z_depth_point = depth_point
-
-        oriented_depth_point = [x_depth_point, -y_depth_point, z_depth_point]
-
-        return oriented_depth_point
     
     def distance_2_points(self, point1, point2):
 
@@ -776,7 +773,15 @@ if __name__ == '__main__':
     try:
         while not rospy.is_shutdown():
 
-            node.loop()
+            # Lets do the following... If the image is bad (nobody on it or with those other factors with wrong results)
+            # Then we return a negative number. However, if the image is good, then we return 0
+            error = node.loop()
+
+            if error < 0:
+                node.test_MSE = 0
+                if node.counter % node.period_pub_stop == 0:
+                    node.check_camera_covered(node.depth_frame)
+
 
     except KeyboardInterrupt:
         print("Shutting down")
