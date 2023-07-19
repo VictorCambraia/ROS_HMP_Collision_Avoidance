@@ -126,6 +126,8 @@ class Skeleton:
 
         # TORSO
         point_TORSO = self.mean_point(self.mean_point(point_LEFT_HIP,point_RIGHT_HIP), self.mean_point(point_LEFT_SHOULDER,point_RIGHT_SHOULDER))
+        # point_TORSO = self.mean_point(point_LEFT_SHOULDER,point_RIGHT_SHOULDER)
+        
         visibility_TORSO = self.mean_point(self.mean_point(visibility_LEFT_HIP,visibility_RIGHT_HIP), self.mean_point(visibility_LEFT_SHOULDER,visibility_RIGHT_SHOULDER))
         # NECK
         point_NECK = self.mean_point(point_LEFT_SHOULDER,point_RIGHT_SHOULDER)
@@ -225,7 +227,8 @@ class Skeleton:
     
     def center_pose_torso(self, node_root: SkeletonTree, joints):
 
-        joints_cetered = self.translate_joint(node_root, joints, joints[node_root.pos]) 
+        translation = copy.deepcopy(joints[node_root.pos])
+        joints_cetered = self.translate_joint(node_root, joints, translation) 
 
         return joints_cetered
 
@@ -370,6 +373,11 @@ class estimate_pose:
         # Define the check MSE (to see if two consecutive poses changed much or not)
         self.test_MSE = 0
 
+        # DELETE LATER
+        # self.aux_count = 0
+
+        print("\n\n ICH BIN HEIR !!!! \n\n")
+
 
     def loop(self):
 
@@ -384,11 +392,18 @@ class estimate_pose:
         if self.counter % 1 == 0:
             self.result_joints, self.skel_image = self.skel.get_skeleton(self.color_image)
 
+            # cv2.imshow("Color with skeleton", self.color_image)
+            # cv2.imshow("Color with skeleton", self.skel_image)
+            # cv2.waitKey(1)
+
             if self.result_joints.pose_world_landmarks == None:
                 print("NOBODY DETECTED IN THE IMAGE")
                 return -1
 
             self.u_pose, self.visibility = self.skel.upper_pose_from_landmark(self.result_joints.pose_world_landmarks.landmark)
+
+            # if self.counter % 60 == 0:
+            #     print("The neck  \n   ", self.u_pose[1], "\n\n")
 
             self.occlusion_shoulder = 0
             scale_factor = self.get_scale_factor(self.visibility, self.result_joints, self.skel, better_joints=0)
@@ -403,8 +418,14 @@ class estimate_pose:
             # Scale the pose up based on the scale_factor obtained
             self.pose_torso_ref_aux = self.skel.scale_pose_up(self.skel.torso, copy.deepcopy(self.u_pose), scale_factor)
 
+            # if self.counter % 60 == 0:
+            #     print("The neck pose is  \n   ", self.pose_torso_ref_aux[1], "\n\n")
+
             # Center the pose -> the coordinates of the torso go to (0,0,0)
             self.pose_torso_ref = self.skel.center_pose_torso(self.skel.torso, copy.deepcopy(self.pose_torso_ref_aux))
+
+            # if self.counter % 60 == 0:
+            #     print("The NECK POSE NOW   is  \n   ", self.pose_torso_ref[1], "\n\n")
 
             self.torso_real_coord = self.get_torso_real_coord(self.visibility, self.result_joints, self.skel, self.pose_torso_ref, self.occlusion_shoulder)
             if self.torso_real_coord.size == 0:
@@ -436,7 +457,10 @@ class estimate_pose:
 
             # cv2.imshow("Depth with skeleton", self.skel_depth_image)
             cv2.imshow("Color with skeleton", self.skel_image)
+            # cv2.imshow("Color with skeleton", self.skel_image)
             cv2.waitKey(1)
+
+            # self.aux_count = 0
 
             # if self.counter % 32 == 0:
             #     print("\n")
@@ -620,8 +644,11 @@ class estimate_pose:
                 print("The depth_pixel couldnt be calculated/finded")
                 return
 
-            self.skel_depth_image = cv2.circle(self.skel_depth_image, (x_depth_pixel, y_depth_pixel), radius=8, color=(0, 0, 255), thickness=-1)
-            
+            # if self.aux_count < 4:
+            #     # print("HERE     HEREEEEE")
+            #     self.skel_depth_image = cv2.circle(self.skel_depth_image, (x_depth_pixel, y_depth_pixel), radius=8, color=(0, 0, 255), thickness=-1)
+            #     self.aux_count += 1
+
             depth = self.depth_frame.get_distance(x_depth_pixel, y_depth_pixel)
 
             if depth == float(0):

@@ -442,9 +442,9 @@ int main(int argc, char **argv){
                 }
                 else{
 
-                    if(counter%4000 == 0){
-                        ROS_INFO_STREAM(" A AMTRIX A EH " << A << " \n");
-                    }
+                    // if(counter%4000 == 0){
+                    //     ROS_INFO_STREAM(" A AMTRIX A EH " << A << " \n");
+                    // }
                 
                     // Update the linear inequalities in the controller
                     translation_controller.set_inequality_constraint(A, b);
