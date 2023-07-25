@@ -722,7 +722,10 @@ class HMP:
 
                             # print("\n",self.pose_matrix_normalized,"\n")
 
-                            single_pose = np.array(self.pose_matrix_normalized[0])
+                            # single_pose = np.array(self.pose_matrix_normalized[0])
+
+                            poses_pred = self.prediction_matrix[50]
+                            single_pose = poses_pred[0:24]
 
                             # print(single_pose.shape)
 
@@ -735,8 +738,8 @@ class HMP:
                             test = test.reshape(-1,1200)
                             prediction = self.model.predict([test, test])[0]
 
-                            error_static = calculate_MSE(test, self.pose_matrix_normalized.reshape(1,-1))
-                            error_predicted = calculate_MSE(test, prediction)
+                            # error_static = calculate_MSE(test, self.pose_matrix_normalized.reshape(1,-1))
+                            error_predicted = calculate_MSE(test, poses_pred)
 
                             # print(" SUPOSE STOPPED PERSON (STATIC ERROR)\n\n",error_static, "\n\n")
 
@@ -762,6 +765,7 @@ class HMP:
 if __name__ == '__main__':
 
     rospy.init_node("human_motion_prediction", anonymous=True)
+    # node = HMP(continuous_model=True)
     node = HMP(continuous_model=True)
 
     try:
