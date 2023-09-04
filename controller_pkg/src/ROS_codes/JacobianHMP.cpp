@@ -44,12 +44,6 @@ JacobianHMP::JacobianHMP(const VectorXd &d_safe, double K_error_value){
 
     K_error = K_error_value;
 }
-// I should  actually delete it!!!
-void JacobianHMP::add_counter(int value){
-    counter = counter + value;
-    // How I didnt know about that....
-    // this->counter = this->counter + value;
-}
 
 // This function should not be here (there is not relation with the jacobian)
 // Later should put this function somewhere else
@@ -89,9 +83,6 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::transform_camera_points_2matrix(std:
         double max_log_sigma = log_sigma.maxCoeff();
         deviation_joints[i] = std::exp(max_log_sigma);
     }
-    // if((counter/1000)%2 == 0){
-    //     std::cout << deviation_joints << std::endl;
-    // }
     return std::make_tuple(points_human, deviation_joints);
 }
 
@@ -106,15 +97,12 @@ VectorXd JacobianHMP::change_ref_to_lab(VectorXd& point_ref, DQ& pose_ref){
     return point_lab;
 }
 
-// std::tuple<MatrixXd, VectorXd> 
 std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialManipulatorMDH& franka, const MatrixXd &Jt,const DQ &t,const MatrixXd &points_human, const VectorXd &deviation_joints){
 
     int total_pose;
     int num_points_human = points_human.rows();
     // n_dim should be equal to 3
     int n_dim = points_human.cols();
-
-    // std::cout << "n_dim    eh   " << n_dim << std::endl;
 
     counter = counter + 1;
 
@@ -125,16 +113,10 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_jacobian_human(const DQ_SerialMa
         total_pose = int(num_points_human/num_joints_per_pose);
     }
 
-    // TODO: I NEED TO PASS ALL THE HUMAN_POINTS TO DQ FORM
-    // ACTUALLY, I DONT NEED (just turn to DQ whenever necessary)
-    // But I still need to think on how I am going to do that
-
     double d_min = 1e6;
     int i_min = -1;
     DQ point;
     int i;
-
-    // std::cout << "HMP   AQUI 0  " << std::endl;
 
     for(i=0; i <num_points_human; i++){
         
@@ -168,8 +150,6 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_3jacobians_human(const DQ_Serial
     // n_dim should be equal to 3
     int n_dim = points_human.cols();
 
-    // std::cout << "n_dim    eh   " << n_dim << std::endl;
-
     counter = counter + 1;
 
     if(num_points_human%num_joints_per_pose != 0){
@@ -179,16 +159,10 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_3jacobians_human(const DQ_Serial
         total_pose = int(num_points_human/num_joints_per_pose);
     }
 
-    // TODO: I NEED TO PASS ALL THE HUMAN_POINTS TO DQ FORM
-    // ACTUALLY, I DONT NEED (just turn to DQ whenever necessary)
-    // But I still need to think on how I am going to do that
-
     double d_min_arm = 1e6, d_min_torso = 1e6, d_min_head = 1e6;
     int i_min_arm = -1, i_min_torso = -1, i_min_head = -1;
     DQ point;
     int i;
-
-    // std::cout << "HMP   AQUI 0  " << std::endl;
 
     for(i=0; i <num_points_human; i++){
         
@@ -223,8 +197,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::get_3jacobians_human(const DQ_Serial
     }
 
     int i_min[3] = {i_min_arm, i_min_torso, i_min_head};
-    
-    // int dim_space = franka.get_dim_configuration_space();
+
     int dim_space = Jt.cols();
     MatrixXd Jacobian(3,dim_space);
     VectorXd d_error(3);
@@ -318,8 +291,6 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
 
         d_safe = d_safe_torso;
     }
-    
-    // std::cout << "HMP   AQUI 0.5  " << std::endl;
 
     VectorXd point_closer = points_human.row(i_min);
     double dist_min = double(norm(t - DQ(point_closer)));   
@@ -338,8 +309,6 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
     DQ line, line1, line2;
     double dist_t_line, dist_t_line1, dist_t_line2;
 
-    // std::cout << "HMP    AQUI 1  " << std::endl;
-
     if(check_plane == 1){
         std::tie(decide_plane, plane) = check_get_plane(points_plane, t);
 
@@ -350,20 +319,17 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             double d_p_plane = double(dot(t,n_plane)-d_plane);
             double d_error_plane = d_p_plane - d_safe;
 
-            // AQUII VOLTAR AQUI DPS
             VectorXd d_error(1);
             d_error << d_error_plane;
             MatrixXd jacobian = franka.point_to_plane_distance_jacobian(Jt, t, plane);
         
-            // AQUII DELETE LATER
+            // PRINTING AND DEBUG PURPOSES
             if(counter%10000 == 0){
             std::cout << "PLANE" << std::endl;
             }
             return std::make_tuple(jacobian, d_error);     
         }
     }
-    
-    // std::cout << "HMP   AQUI 2  " << std::endl;
 
     if(check_line == 1){
         std::tie(decide_line, line, dist_t_line) = check_get_line(points_line, t);
@@ -381,7 +347,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             VectorXd d_error(1);
             d_error << d_error_line;
 
-            // AQUII DELETE LATER
+            // PRINTING AND DEBUG PURPOSES
             if(counter%10000 == 0){
             std::cout << "LINE - 1 AVAILABLE" << std::endl;
             }
@@ -431,7 +397,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             VectorXd d_error(1);
             d_error << d_error_line;
 
-            // AQUII DELETE LATER
+            // PRINTING AND DEBUG PURPOSES
             if(counter%10000 == 0){
             std::cout << "LINE - 2 AVAILABLE" << std::endl;
             }
@@ -439,7 +405,6 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
             return std::make_tuple(jacobian, d_error);
         }
     }
-    // std::cout << "HMP  AQUI 3  " << std::endl;
 
     // If the code reaches here, then we have the only the point to take in account
     // Use only the point if the others are not correct, and to that we calculate the jacobian        
@@ -452,7 +417,7 @@ std::tuple<MatrixXd, VectorXd> JacobianHMP::choose_Jacobian(const DQ_SerialManip
     VectorXd d_error(1);
     d_error << d_error_p;
 
-    // AQUII DELETE LATER
+    // PRINTING AND DEBUG PURPOSES
     if(counter%10000 == 0){
         std::cout << "  POINT  " << std::endl;
     }
@@ -473,8 +438,7 @@ std::tuple<int, DQ> JacobianHMP::check_get_plane(MatrixXd &points_plane, const D
     n_plane = (1/double(norm(n_plane)))*n_plane;
 
     double d_plane;
-    // To guarantee that the direction of the plane is the correct one
-    // Do more checks later to see if the direction is really correct
+    
     DQ vet_t_plane = t - p_plane0;
 
     if(double(dot(vet_t_plane, n_plane)) > 0){

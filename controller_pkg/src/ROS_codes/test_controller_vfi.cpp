@@ -32,18 +32,12 @@ int refresh_pose = 0;
 int stop_robot;
 
 void cb_update_hmp(const std_msgs::String::ConstPtr& msg){
-    // ROS_INFO("I heard: [%s]", msg->data.c_str());
     str_poses_human = msg->data.c_str();
     refresh_pose = 1;
-    
-    // std::cout << "The size is   " << str_poses_human.length()  << std::endl;
-    // std::cout << str_poses_human.substr(0,100) << std::endl;
 }
 
 void cb_stop_robot(const std_msgs::Int32::ConstPtr& msg){
-    // ROS_INFO("I heard: [%s]", msg->data.c_str());
     stop_robot = int(msg->data);
-    // std::cout << stop_robot << std::endl;
 }
 
 int main(int argc, char **argv){
@@ -58,7 +52,6 @@ int main(int argc, char **argv){
     std::cout << "Starting V-REP simulation..." << std::endl;
     vi.start_simulation();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    // int iterations = 10000;
 
     //------------------- Robot definition--------------------------
     //---------- Franka Emika Panda serial manipulator
@@ -91,21 +84,6 @@ int main(int argc, char **argv){
     pose_controller.set_damping(1);
     pose_controller.set_control_objective(DQ_robotics::Pose);
 
-    // controller.set_stability_threshold(0.00001);
-
-    // VectorXd q_min = VectorXd(7);
-    // q_min << -2.8973,   -1.7628,   -2.8973,   -3.0718,   -2.8973,   -0.0175,  -2.8973;
-
-    // VectorXd q_max = VectorXd(7);
-    // q_max << 2.8973,    1.7628,    2.8973,  -0.0698,    2.8973,    3.7525,    2.8973;
-
-    // // Define some limits regarding the position and velocity of the robot joints
-    // VectorXd q_minus = -(pi/2.0)*VectorXd::Ones(7);
-    // VectorXd q_plus = (pi/2.0)*VectorXd::Ones(7);
-
-    // VectorXd vel_minus = -2*VectorXd::Ones(7);
-    // VectorXd vel_plus = 2*VectorXd::Ones(7);
-
     VectorXd q_minus(7);
     VectorXd q_plus(7);
     q_minus << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
@@ -131,28 +109,22 @@ int main(int argc, char **argv){
 
     // ------------------------------------------------------//
 
-    // Pose Human 1 (Franka_human1)
+    // Pose Human Intially
     MatrixXd points_human(9,3);
     points_human << 0.0,1,0.5, 0.0,1,0.8, 0.0,1,1.0, 0.3,1,0.8, -0.3,1,0.8, 0.3,1,0.5, -0.3,1,0.5, 0.3,0.7,0.5, -0.3,0.7,0.5;
-
     MatrixXd points_hmp = points_human;
-
-    std::cout << "Points_hmp  rows  " << points_hmp.rows() << "   cols   "<< points_hmp.cols() << std::endl;
 
     // Define the floor
     DQ n_floor = 1*k_;
-    // d_floor = DQ(-0.2);
     DQ d_floor = DQ(0);
     DQ pi_floor = n_floor + E_*d_floor;
 
     // Define parameters for the VFI
-    // nd = 1;
     double nd = 0.4;
     double d_safe_floor = 0.1;
 
     // Define the safety parameters for the human
     VectorXd d_safe_j(3);
-    // d_safe_j << 0.05, 0.4, 0.6;
     d_safe_j << 0.5, 0.5, 0.5;
 
     //If you want to change the K_error factor from 0.2 to other value, write it here
@@ -168,14 +140,9 @@ int main(int argc, char **argv){
     VectorXd deviation_joints = VectorXd::Zero(n_rows);
 
     // Define the pose of the camera
-    // DQ pose_camera = DQ(1);
-    // DQ pose_camera = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
-
-    // Define the pose of the camera
     double ang_degree = -90;
     DQ rotation_camera = cos(ang_degree/2*(pi/180)) + sin(ang_degree/2*(pi/180))*(1*k_);
     DQ translation_camera = -0.03*i_ -0.23*j_ + 0.38*k_;
-    // pose_camera_ = 1 + 0.5*E_*(0*i_ -0.7*j_ + 0*k_);
     DQ pose_camera = rotation_camera + 0.5*E_*translation_camera*rotation_camera;
 
     // Initialize the variables that we be used later
@@ -188,8 +155,6 @@ int main(int argc, char **argv){
 
     ros::NodeHandle n_stop;
     ros::Subscriber sub_stop_robot = n_stop.subscribe("stop_robot", 1000, cb_stop_robot);
-
-    //   ros::spin();
 
     int i; //aux variable for the for
     int counter; // count the number of cycles
@@ -221,7 +186,6 @@ int main(int argc, char **argv){
         // the translation error
         VectorXd e = VectorXd::Zero(4);
         e[0] = 1;
-        // std::cout << "Starting Control Loop..." << std::endl;
 
         counter = 0;
 
@@ -246,13 +210,10 @@ int main(int argc, char **argv){
                 }
                 count_refresh++;
 
-                // std::cout << "AQUIII 1  " << std::endl;
-                // Check if this is going to work
                 std::tie(poses_human, deviation_joints) = J_hmp.transform_camera_points_2matrix(str_poses_human, pose_camera);
                 refresh_pose = 0;
-                // std::cout << "AQUIII 2  " << std::endl;
 
-                // TRY TO SEND THE POSE TO THE COPPELIASIM
+                // SEND THE POSE TO THE COPPELIASIM
                 // Turn this into a function later
                 vi.set_object_translation("Torso", DQ(poses_human.row(0)));
                 vi.set_object_translation("Neck", DQ(poses_human.row(1)));
@@ -263,21 +224,16 @@ int main(int argc, char **argv){
                 vi.set_object_translation("Right_Elbow", DQ(poses_human.row(6)));
                 vi.set_object_translation("Left_Hand", DQ(poses_human.row(7)));
                 vi.set_object_translation("Right_Hand", DQ(poses_human.row(8)));
-
             }
 
 
             counter = counter + 1;
             q = vi.get_joint_positions(jointnames);
 
-            // std::cout << "AQUI 1  " << std::endl;
-
             MatrixXd A(0,0);
             VectorXd b(0);
             MatrixXd A_copy(0,0);
             VectorXd b_copy(0);
-
-            // std::cout << "AQUI 2  " << std::endl;
 
             int n = franka.get_dim_configuration_space();
             int joint_counter; //aux variable for the for
@@ -287,40 +243,19 @@ int main(int argc, char **argv){
 
                 MatrixXd Jx = franka.pose_jacobian(q,joint_counter);
 
-                // std::cout << "AQUI 4  " << std::endl;
-
                 x = franka.fkm(q, joint_counter);
                 t = translation(x);
 
                 // Get the robot's translation Jacobian
                 MatrixXd Jt = franka.translation_jacobian(Jx, x);
 
-                // std::cout << Jt.rows() << "    " << Jt.cols() << std::endl;
-
-                // // Get the distance Jacobian from the cube/sphere (Lets see if it works without defining the size)
-                // MatrixXd Jp_p(1, n);
-                // Jp_p << franka.point_to_point_distance_jacobian(Jt, t, p_sphere), MatrixXd::Zero(1, n-1-joint_counter);
-                // // Jp_p << franka.point_to_point_distance_jacobian(Jt, t, p_sphere);
-
-                // // Get the distance to the sphere 
-                // double d_p_p = double(norm(t-p_sphere));
-                // double d_error = pow(d_p_p,2) - pow(d_safe,2);
-
-                // std::cout << "AQUI 5  " << std::endl;
-                if((J_hmp.counter+1)%2000 == 0){
-                    // std::cout << "        JOINT NUMERO      " << joint_counter << std::endl;
-                }
-                
                 // The Jacobian for one or more poses
                 MatrixXd Jp_p_aux;
                 VectorXd d_error;
-                // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, points_hmp);
                 // std::tie(Jp_p_aux, d_error) = J_hmp.get_jacobian_human(franka, Jt,t, poses_human, deviation_joints);
                 std::tie(Jp_p_aux, d_error) = J_hmp.get_3jacobians_human(franka, Jt,t, poses_human, deviation_joints);
                 MatrixXd Jp_p(Jp_p_aux.rows(),n);
                 Jp_p << Jp_p_aux, MatrixXd::Zero(Jp_p_aux.rows(), n-1-joint_counter);
-
-                // std::cout << "AQUI 5.5  " << std::endl;
 
                 // Get the distance Jacobian to the floor
                 MatrixXd Jt_pi(1,n);
@@ -341,35 +276,21 @@ int main(int argc, char **argv){
                 VectorXd bp_floor(1);
                 bp_floor << nd*d_error_floor;
 
-                // std::cout << "AQUI 6  " << std::endl;
-
                 //Define the linear inequality matrix and the linear inequality vector
                 MatrixXd A_aux(Ap_p.rows() + Ap_floor.rows(), Ap_p.cols());
                 A_aux << Ap_p, Ap_floor;
 
-                // std::cout << "AQUI 7  " << std::endl;
-
                 VectorXd b_aux(bp_p.size() + bp_floor.size());
                 b_aux << bp_p, bp_floor;
 
-                // std::cout << "AQUI 8  " << std::endl;
                 A_copy.resize(A.rows(),A.cols());
                 A_copy = A;
 
                 b_copy.resize(b.size());
                 b_copy = b;
 
-                // std::cout << "AQUI 9  " << std::endl;
-
-                // std::cout << A_copy.rows() << "    " << A_copy.cols() << std::endl;
-
                 A.resize(A_copy.rows() + A_aux.rows(), A_aux.cols());
                 b.resize(b_copy.size() + b_aux.size());
-
-                // std::cout << "AQUI 10  " << std::endl;
-
-                // std::cout << A.rows() << "    " << A.cols() << std::endl;
-                // std::cout << A_aux.rows() << "    " << A_aux.cols() << std::endl;
 
                 if(A_copy.size() == 0){
                     A << A_aux;
@@ -377,8 +298,6 @@ int main(int argc, char **argv){
                 else{
                     A << A_copy, A_aux;
                 }
-                
-                // std::cout << "AQUI 10.5  " << std::endl;
 
                 if(b_copy.size() == 0){
                     b << b_aux;
@@ -386,8 +305,6 @@ int main(int argc, char **argv){
                 else{
                     b << b_copy, b_aux;
                 }                
-
-                // std::cout << "AQUI 11  " << std::endl;
             }
 
             // Later I have to define the limits for the joints range as well
@@ -395,8 +312,6 @@ int main(int argc, char **argv){
             W_q <<  -1*MatrixXd::Identity(7,7), MatrixXd::Identity(7,7);
             VectorXd w_q(14);
             w_q << -1*(q_minus - q), 1*(q_plus - q);
-
-            // std::cout << "AQUI 12  " << std::endl;
 
             A_copy.resize(A.rows(),A.cols());
             A_copy = A;
@@ -417,8 +332,6 @@ int main(int argc, char **argv){
             VectorXd w_vel(14);
             w_vel << -1*vel_minus, 1*vel_plus;
 
-            // std::cout << "AQUI 12  " << std::endl;
-
             A_copy.resize(A.rows(),A.cols());
             A_copy = A;
 
@@ -431,22 +344,14 @@ int main(int argc, char **argv){
             A << A_copy, W_vel;
             b << b_copy, w_vel;
 
-            // std::cout << "AQUI 13  " << std::endl;
-
             VectorXd u(n);
             // If there is some error/exception, mainly regarding the solver not finding a solution...
             try{
                 if(stop_robot == 1){
-                    // u << VectorXd::Zero(n);
                     // Probably it shouldn't be a runtime error, but okay. It is just to merge the stop_robt with the solver error 
                     throw std::runtime_error("Something is blocking the camera");
                 }
                 else{
-
-                    // if(counter%4000 == 0){
-                    //     ROS_INFO_STREAM(" A AMTRIX A EH " << A << " \n");
-                    // }
-                
                     // Update the linear inequalities in the controller
                     translation_controller.set_inequality_constraint(A, b);
                     // Get the next control signal [rad/s]
@@ -455,7 +360,6 @@ int main(int argc, char **argv){
             }
             catch(std::exception& e){
                 std::cout << e.what() << std::endl;
-                std::cout << "HEREEEE \n\n HEREEEEE '\n\n" << std::endl;
 
                 MatrixXd A_stop(1,1);
                 VectorXd b_stop(1);
