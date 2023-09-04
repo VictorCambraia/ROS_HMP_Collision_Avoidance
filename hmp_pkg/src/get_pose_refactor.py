@@ -14,34 +14,6 @@ from mpl_toolkits.mplot3d import Axes3D
 import math
 import copy
 
-# TODO Então vamo lá, coisas a se fazer ainda:
-# Implementar a msg nothing no outro node (cagativo)
-# Pegar o código q já escrevi que faz a mescla com a pose parada (esse código ainda não tem isso)
-# Poderia fazer algum check pra ver se os valores q a previsao deu estao de acordo, na verdade
-# não é nem os valores da predição mas sim os inputs da predição... (na matriz normalized)
-# Mas de qualquer forma acho que a maior parte dos checks tem q ser feitos no outro node.
-# TODO Talvez colocar no outro node um check entre poses.... Se a pose variar absurdamente, então começa as coisas do zero
-# Pra checar isso eu usaria o tal do MSE q já tá implementado 
-# TODO vê se vou usar o scaling factor ou não. A coisa boa do scaling factor é saber se os ombros tão ocultos ou não.
-# Mas isso eu posso fazer sem o scaling factor. O grande problema do scaling factor é quando ele dá valores absurdos
-# TODO vê o coisa do range do Y (As vezes eu tenho problema com isso)
-
-# TODO aqui já é uma coisa maiorzinha: implementar o VAE q preve a posição do torso... Espero q essa previsão não demore uma eternidade tbm
-
-# TODO Fazer o desnormalize das poses previstas. Pra que assim, saibamos a real posição da pessoa
-
-# TODO Fazer realmente a parte da distribuição e analisar os valores. ISSO AQUI É PRIORIDADE!! VÊ SE ISSO TÁ FUNCIONANDO OU NÃO
-
-# TODO Se eu tiver tempo (que penso q não vai ser o caso), eu podia adicionar os dados de outros datasets, dados com movimentos normais
-# Porque os movimentos no dataset da Judith são os movimentos meio estranhos e rápidos.... Não sei se representa bem movimentos normais
-
-# CONSEGUI CONTORNAR ISSO
-# Só pra ter em mente que as predições tem um tempo de 35ms aprox. o que implica q não conseguimos faze-la em 30fps.
-# Ou seja, vamos fazer em 15 fps. Acho que não tem um grande problema fazer isso...
-
-# AO FAZER model() ao inves de model.predict(), o resultado eh incrivelmente mais rapido. Ou seja, conseguimos rodar tudo a 30 fps...
-# AINDA BEM!!
-
 
 class SkeletonTree:
     def __init__(self, pos):
@@ -126,8 +98,6 @@ class Skeleton:
 
         # TORSO
         point_TORSO = self.mean_point(self.mean_point(point_LEFT_HIP,point_RIGHT_HIP), self.mean_point(point_LEFT_SHOULDER,point_RIGHT_SHOULDER))
-        # point_TORSO = self.mean_point(point_LEFT_SHOULDER,point_RIGHT_SHOULDER)
-        
         visibility_TORSO = self.mean_point(self.mean_point(visibility_LEFT_HIP,visibility_RIGHT_HIP), self.mean_point(visibility_LEFT_SHOULDER,visibility_RIGHT_SHOULDER))
         # NECK
         point_NECK = self.mean_point(point_LEFT_SHOULDER,point_RIGHT_SHOULDER)
@@ -144,29 +114,6 @@ class Skeleton:
         visibility_RIGHT_HAND = self.mean_point(visibility_RIGHT_INDEX,visibility_RIGHT_PINKY)
 
         # Changing the skeleton configuration (to correspond the one used by Butepage)
-        
-        # pose_upper = []
-        # pose_upper.append(point_TORSO)
-        # pose_upper.append(point_NECK)
-        # pose_upper.append(point_HEAD)
-        # pose_upper.append(point_LEFT_SHOULDER)
-        # pose_upper.append(point_RIGHT_SHOULDER)
-        # pose_upper.append(point_LEFT_ELBOW)
-        # pose_upper.append(point_RIGHT_ELBOW)
-        # pose_upper.append(point_LEFT_HAND)
-        # pose_upper.append(point_RIGHT_HAND)  
-
-        # visibility = []
-        # visibility.append(visibility_TORSO)
-        # visibility.append(visibility_NECK)
-        # visibility.append(visibility_HEAD)
-        # visibility.append(visibility_LEFT_SHOULDER)
-        # visibility.append(visibility_RIGHT_SHOULDER)
-        # visibility.append(visibility_LEFT_ELBOW)
-        # visibility.append(visibility_RIGHT_ELBOW)
-        # visibility.append(visibility_LEFT_HAND)
-        # visibility.append(visibility_RIGHT_HAND)  
-
         pose_upper = np.array(point_TORSO)
         pose_upper = np.vstack([pose_upper,point_NECK])
         pose_upper = np.vstack([pose_upper,point_HEAD])
@@ -217,7 +164,6 @@ class Skeleton:
             
                 vec_child = joints[child.pos]
                 norm = scaling_factor 
-                # norm = limb_length[child.pos - 1]
                 # That is the position that we want this joint to be
                 vec_final = vec_parent + norm*(vec_child - vec_parent)  
                 joints = self.translate_joint(child, joints, vec_child - vec_final)
@@ -279,11 +225,8 @@ class Skeleton:
                 y = np.append(joints[node.pos][1] , joints[child.pos][1])
                 z = np.append(joints[node.pos][2] , joints[child.pos][2])
 
-                # Eu tava imaginando que todos os membros (limbs) tinham tamanho 1
-                # É próximo de 1 mas não é tudo exatamente esse valor
                 norm = (x[0] - x[1])**2 + (y[0] - y[1])**2 + (z[0] - z[1])**2
                 norm = math.sqrt(norm)
-                # print(norm)
 
                 ax.plot(x, y, z, marker = 'o')
 
@@ -340,7 +283,7 @@ class estimate_pose:
         self.depth_min = 0.11 #meter
         self.depth_max = 10.0 #meter
 
-        # WE DON'T ALIGN ALL THE POINTS IN THIS CASE (ONLY THE FEW THAT ARE NECESSARY)
+        # WE DON'T ALIGN ALL THE POINTS IN THIS CASE (ONLY THE FEW THAT ARE NECESSARY). THEREFORE, WE COMMENT THE LINES BELOW
         # # Create an align object
         # # rs.align allows us to perform alignment of depth frames to others frames
         # # The "align_to" is the stream type to which we plan to align depth frames.
@@ -354,12 +297,6 @@ class estimate_pose:
         self.depth_to_color_extrin =  self.profile.get_stream(rs.stream.depth).as_video_stream_profile().get_extrinsics_to( self.profile.get_stream(rs.stream.color))
         self.color_to_depth_extrin =  self.profile.get_stream(rs.stream.color).as_video_stream_profile().get_extrinsics_to( self.profile.get_stream(rs.stream.depth))
 
-        #AQUII (PENSAR SE EU VOU PRECISAR DE FATO DISSO)
-        # Define this variables to save the previous pixel (if necessary): in case the new pixel obtained doesn't exist
-        self.x_depth_pixel_prev = 320
-        self.y_depth_pixel_prev = 240
-
-
         # INITIALIZATION REGARDING MEDIAPIPE
         self.skel = Skeleton()
 
@@ -372,11 +309,6 @@ class estimate_pose:
 
         # Define the check MSE (to see if two consecutive poses changed much or not)
         self.test_MSE = 0
-
-        # DELETE LATER
-        # self.aux_count = 0
-
-        print("\n\n ICH BIN HEIR !!!! \n\n")
 
 
     def loop(self):
@@ -392,40 +324,24 @@ class estimate_pose:
         if self.counter % 1 == 0:
             self.result_joints, self.skel_image = self.skel.get_skeleton(self.color_image)
 
-            # cv2.imshow("Color with skeleton", self.color_image)
-            # cv2.imshow("Color with skeleton", self.skel_image)
-            # cv2.waitKey(1)
-
+            # Check if someone was detected
             if self.result_joints.pose_world_landmarks == None:
                 print("NOBODY DETECTED IN THE IMAGE")
                 return -1
 
             self.u_pose, self.visibility = self.skel.upper_pose_from_landmark(self.result_joints.pose_world_landmarks.landmark)
 
-            # if self.counter % 60 == 0:
-            #     print("The neck  \n   ", self.u_pose[1], "\n\n")
-
             self.occlusion_shoulder = 0
             scale_factor = self.get_scale_factor(self.visibility, self.result_joints, self.skel, better_joints=0)
             if scale_factor == 0:
                 print("Scale factor was 0, and that cannot happen")
                 return -2
-            # print("\n SCALE FACTOR   ", scale_factor, "\n")
-
-            # TODO Já não lembro do que esse TODO trata pra ser sincero
-            # AQUII (Não usar o tal do deepcopy -> Usar apenas nparray pra pose (vai facilitar minha vida))
 
             # Scale the pose up based on the scale_factor obtained
             self.pose_torso_ref_aux = self.skel.scale_pose_up(self.skel.torso, copy.deepcopy(self.u_pose), scale_factor)
 
-            # if self.counter % 60 == 0:
-            #     print("The neck pose is  \n   ", self.pose_torso_ref_aux[1], "\n\n")
-
             # Center the pose -> the coordinates of the torso go to (0,0,0)
             self.pose_torso_ref = self.skel.center_pose_torso(self.skel.torso, copy.deepcopy(self.pose_torso_ref_aux))
-
-            # if self.counter % 60 == 0:
-            #     print("The NECK POSE NOW   is  \n   ", self.pose_torso_ref[1], "\n\n")
 
             self.torso_real_coord = self.get_torso_real_coord(self.visibility, self.result_joints, self.skel, self.pose_torso_ref, self.occlusion_shoulder)
             if self.torso_real_coord.size == 0:
@@ -458,24 +374,7 @@ class estimate_pose:
             # cv2.imshow("Depth with skeleton", self.skel_depth_image)
             cv2.imshow("Color with skeleton", self.skel_image)
             # cv2.imshow("Color with skeleton", self.skel_image)
-            cv2.waitKey(1)
-
-            # self.aux_count = 0
-
-            # if self.counter % 32 == 0:
-            #     print("\n")
-            #     print("      ", self.torso_real_coord)
-            #     print("\n")
-
-            # if self.counter % 100 == 0:
-
-            #     print("TORSO REAL COORD",self.torso_real_coord, "\n")
-
-            #     # print(self.u_pose, "\n\n")
-            #     # print(self.pose_torso_ref_aux, "\n\n")
-            #     print(self.pose_torso_ref, "\n\n")
-            #     print(self.pose_lab_ref)
-            #     # self.skel.plot_skeleton_Full_Window(self.skel.torso, self.pose_torso_ref, 1)     
+            cv2.waitKey(1) 
 
             # Everything went well (A person was in fact detected)
             return 0   
@@ -543,20 +442,14 @@ class estimate_pose:
         msg = ""
         for i in range(9):
             for j in range(3):
-                # value = str(pose[i][j])
-                # msg = msg + value + ","
 
                 value = pose[i][j]
                 msg = msg + "{:.4f}".format(value) + ","
 
         for j in range(3):
-            # value = str(torso_coord[j])
-            # msg = msg + value + ","        
-
+     
             value = torso_coord[j]
             msg = msg + "{:.4f}".format(value) + ","       
-
-        # print(msg)
 
         return msg
 
@@ -567,9 +460,7 @@ class estimate_pose:
 
     # Get the coordinates of the torso considering that the RealSense gives the right values
     def get_torso_real_coord(self, visibility, result_joints, skel: Skeleton, pose_torso_ref, occlusion_shoulder = 0):
-        # Probably it would be better to do that after the scale factor
         # So, after having the pose in the TORSO reference (Torso, point equals (0,0,0))
-        # This method could probably be "imporved" (without these repetitions of code)
 
         # Lets calculate torso position based on left shoulder position
         if visibility[skel.left_shoulder.pos] >= 0.8 and occlusion_shoulder == 0: 
@@ -580,7 +471,6 @@ class estimate_pose:
             if real_coord == None:
                 print("Couldnt get the torso real coord")
                 return np.array([])
-                # return
 
             torso_coord = real_coord - pose_torso_ref[skel.left_shoulder.pos]
 
@@ -595,7 +485,6 @@ class estimate_pose:
             if real_coord == None:
                 print("Couldnt get the torso real coord")
                 return np.array([])
-                # return
 
             torso_coord = real_coord - pose_torso_ref[skel.right_shoulder.pos]
             return torso_coord
@@ -609,7 +498,6 @@ class estimate_pose:
             if real_coord == None:
                 print("Couldnt get the torso real coord")
                 return np.array([])
-                # return
 
             torso_coord = real_coord - pose_torso_ref[skel.head.pos]
             return torso_coord
@@ -617,8 +505,6 @@ class estimate_pose:
         else:
             print("Could not get the TORSO coordinates in the lab frame")
             return np.array([])
-            # return
-
 
 
     # Get the coordinates of a point in the real world (x,y,z) given the coordinates of the pixel of that point 
@@ -635,19 +521,12 @@ class estimate_pose:
             
             x_depth_pixel, y_depth_pixel = depth_pixel
 
-            # TODO CHECK THE RANGE OF Y (SOMETIMES I GET A PROBLEM REGADING THIS RANGE)
-
             x_depth_pixel = int(x_depth_pixel)
             y_depth_pixel = int(y_depth_pixel)
 
             if x_depth_pixel == -1 or y_depth_pixel == -1:
                 print("The depth_pixel couldnt be calculated/finded")
                 return
-
-            # if self.aux_count < 4:
-            #     # print("HERE     HEREEEEE")
-            #     self.skel_depth_image = cv2.circle(self.skel_depth_image, (x_depth_pixel, y_depth_pixel), radius=8, color=(0, 0, 255), thickness=-1)
-            #     self.aux_count += 1
 
             depth = self.depth_frame.get_distance(x_depth_pixel, y_depth_pixel)
 
@@ -777,9 +656,6 @@ class estimate_pose:
 
         scale_factor = dist_real/dist_estimated
 
-        # DELETE THIS LINE later
-        # scale_factor = 1
-
         # Check if scale_factor has an acceptable value:
         if (scale_factor > 0.5) and (scale_factor < 2):
             return scale_factor
@@ -787,8 +663,6 @@ class estimate_pose:
             # We had some kind of error when calculating it... So, we throw an error
             print("The value obtained for the scale factor is not plausible. Therefore, something wrong happened")
             return 0
-
-        # return scale_factor
 
 
 
