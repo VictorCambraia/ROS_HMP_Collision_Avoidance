@@ -1,51 +1,23 @@
 # ROS_HMP_Collision_Avoidance
-This repo wil contain all the code (files and directories) of the ROS workspace to run the entire work related with HMP and collision avoidance (controller + VFI part)
 
------------------------------------
-TODOs of the repo
+This repo contains all the code (file and directories) of the ROS packages to run the work related with Human Motion Prediction (HMP) and to run some tests regarding the collision avoidance with VFI.
 
-I have just run for the first time in coppeliaSIm the system completely integrated (HMP + VFI + controller).
-And I noticed some things that I need to think how I solve them
+---------
+The hmp_pkg is the package related to the HMP - as the name suggests. Inside it you have two important nodes: get_pose_refactor.py and HMP_trans_continuous.py. 
 
-1 - If the camera doesnt capture the human motion, then we consider that the robot is free to move or not?
-  The first idea that came through my mind was: If the camera is being blocked (that means if there is  something blocking the view), then the robot should stop. However, if the  camera is "watching" everything, then we should probably just keep going (there is nobody present). (DONE, I think)
-  
-2 - What should I do when the solver cannot find a solution? I should probably just stop the robot right? (DONE, I think)
+The first code is the one responsible for initializing the Intel Realsense camera, getting the footage and passing it through the MediaPipe Landmark Detector, so we can get information about the pose of the person in real-time.
 
-3 - I NEED to take in account that the robot base is not in the (0,0,0) postion (DONE, I think)
+The second code is the one that stores the human pose and passes it through the VAE network, so we can get the predictions of approximately 1.5s.
 
-4 - I NEED to take in account the variance of the points!!! (DONE, I think)
+The communication between these two codes/nodes is done using simple ROS topics.
 
-5 - I NEED to change the Model VAE (the sample z). Right now it only considers z = z_mu, which is wrong.
+-> The HMP_with_translation.py code is an outdated version of HMP_trans_continuous.py and is probably already deleted from the repo.
 
-6 - I NEED TO TEST everything: the variance, the 3 jacobians and the stop of the robot. (DONE, I think)
+-> The .model files are different VAE models built using slightly different configurations (the code to create such models were developed using the colab). In the end, for a continuous prediction (with also the variance to produce a gaussian distribution) we use the model XPTO and for a discrete prediction (just the mean) we use the model XPTO2
 
-7 - I NEED to improve the blocking camera strategy. Which actually means another refactor of the code.
-The best would be: if there is really someone (if the msg is published), then say stop_robot == 0. Else, check for covered or not
 
-8 - SOLVE this issue RuntimeError: out of range value for argument "y". I basically need to put a try and catch on this part of the code
+------------
+The controller_pkg was the ros package used in the beginning of the project to test the collision avoidance implementation. The tests were performed with the help of the CoppeliaSim simulator. However, in the end of the project the code was being tested and adjusted in the real robot. Hence, the final code related to the collision avoidance with VFI is not in this repo, but in another one called franka_ros. 
 
-TODOs that are not a must (but would be good if I could implement them)
+-> This pkg has some Coppelia scenes that might be useful for you. If you use the franka_kinematic_human2.ttt and run the ros node test_controller_vfi.cpp, you will see the person's body in the CoppeliaSim in real-time.
 
--> Search for others datasets (I actually dont think I will have enough time for this)
-
---------------------------------
-Where were the codes before this repo?
-
-So, before creating this repo and this new catkin/ros workspace.  The codes were splitted in different directories in the PC from the uni and also in my personal notebook. So, it was kind of a mess. Anyway, I will try to register here where were everything, so if I need to recover something someday, I remeber about it.
-
-In my personal PC:
--> HMP code was in the catkin_ws_HMP (path: /Area de Trabalho/Tese/catkin_ws_HMP/src/mediapipe_pkg)
-I actually thought about expanding this workspace instead of creating a new one. But I think it will be easier and cleaner just to create another one, and get just the good part (this was not a git directoy, which was bad)
-
--> VFI Controller code was in the GIT_controller_code (path: /Area de Trabalho/dqrobotics/GIT_controller_code/VFI_Controller/cpp_main_codes)
-This directory was "connected" with git, however it was not a ROS workspace, and now I need to run these codes in ROS...
-
-In the uni PC:
--> HMP code was in the catkin_test (path: victor/catkin_test)
-The name of the directory is pretty bad (created a long time ago as test), and is not a git directory. 
-
--> VFI Controller code was in the GIT_controller_code (path: victor/DQrobotics/GIT_Controler_code/VFI_Controller)
-This directory was "connected" with git, however it was not a ROS workspace, and now I need to run these codes in ROS...
-
-So, as we can see it is better to just create a new ROS workspace connected with git and that has everythinng....
