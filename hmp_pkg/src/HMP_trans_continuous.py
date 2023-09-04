@@ -14,34 +14,6 @@ import copy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-# TODO Então vamo lá, coisas a se fazer ainda:
-# Implementar a msg nothing no outro node (cagativo)
-# Pegar o código q já escrevi que faz a mescla com a pose parada (esse código ainda não tem isso)
-# Poderia fazer algum check pra ver se os valores q a previsao deu estao de acordo, na verdade
-# não é nem os valores da predição mas sim os inputs da predição... (na matriz normalized)
-# Mas de qualquer forma acho que a maior parte dos checks tem q ser feitos no outro node.
-# TODO Talvez colocar no outro node um check entre poses.... Se a pose variar absurdamente, então começa as coisas do zero
-# Pra checar isso eu usaria o tal do MSE q já tá implementado 
-# TODO (FEITO, MAS PRECISO VALIDAR) vê se vou usar o scaling factor ou não. A coisa boa do scaling factor é saber se os ombros tão ocultos ou não.
-# Mas isso eu posso fazer sem o scaling factor. O grande problema do scaling factor é quando ele dá valores absurdos (Posso fazer um check facil)
-# TODO vê o coisa do range do Y (As vezes eu tenho problema com isso)
-
-# TODO (FEITO, MAS PRECISO VALIDAR) aqui já é uma coisa maiorzinha: implementar o VAE q preve a posição do torso... Espero q essa previsão não demore uma eternidade tbm 
-
-# TODO (FEITO, MAS PRECISO VALIDAR) Fazer o desnormalize das poses previstas. Pra que assim, saibamos a real posição da pessoa
-
-# TODO Fazer realmente a parte da distribuição e analisar os valores. ISSO AQUI É PRIORIDADE!! VÊ SE ISSO TÁ FUNCIONANDO OU NÃO
-
-# TODO Se eu tiver tempo (que penso q não vai ser o caso), eu podia adicionar os dados de outros datasets, dados com movimentos normais
-# Porque os movimentos no dataset da Judith são os movimentos meio estranhos e rápidos.... Não sei se representa bem movimentos normais
-
-# CONSEGUI CONTORNAR ISSO
-# Só pra ter em mente que as predições tem um tempo de 35ms aprox. o que implica q não conseguimos faze-la em 30fps.
-# Ou seja, vamos fazer em 15 fps. Acho que não tem um grande problema fazer isso...
-
-# AO FAZER model() ao inves de model.predict(), o resultado eh incrivelmente mais rapido. Ou seja, conseguimos rodar tudo a 30 fps...
-# AINDA BEM!!
-
 
 def decode_msg(msg):
 
@@ -56,10 +28,6 @@ def decode_msg(msg):
 
     torso_coord = points[-1,:]
     pose = points[0:N_JOINTS,:]
-    # pose = points[0:N_JOINTS,:].reshape((1,-1))
-
-    # print(torso_coord)
-    # print(pose)
 
     return pose, torso_coord
 
@@ -69,19 +37,11 @@ def calculate_MSE(vec1, vec2):
     N_TIMEWINDOWS = 50
 
     diff = vec1 - vec2
-
-    # print(diff[:15])
-
     square = diff**2
-
-    # print(square[:15])
 
     square = square.reshape((N_TIMEWINDOWS, 3*N_JOINTS))
 
     mse = square.sum(axis=1)
-
-    # print(mpe[:15])
-
     return mse
 
 class SkeletonTree:
@@ -114,7 +74,6 @@ class Skeleton:
         self.right_elbow.children.append(self.right_hand)
         
 
-    # @staticmethod
     def translate_joint(self, node_root: SkeletonTree, joints, translation):
 
         parent = node_root.pos
@@ -158,7 +117,6 @@ class Skeleton:
     
     def scale_pose_down(self, node_root: SkeletonTree, joints, limb_length):
 
-        # print("\n\n")
         queue = []
         queue.append(node_root)
 
@@ -174,7 +132,6 @@ class Skeleton:
             
                 vec_child = joints[child.pos]
 
-                # norm = 1/scaling_factor 
                 norm = 1/limb_length[child.pos - 1]
                 # That is the position that we want this joint to be
                 vec_final = vec_parent + norm*(vec_child - vec_parent)  
@@ -182,9 +139,7 @@ class Skeleton:
                 queue.append(child)
 
                 size_limb = self.distance_2_points(joints[parent], joints[child.pos])
-                # print(size_limb)
 
-        # print("\n\n\n")
         return joints 
     
     def distance_2_points(self, point1, point2):
@@ -197,14 +152,8 @@ class Skeleton:
 
     def get_size_limbs(self, joints):
 
-        #TODO WHen the limb_length equals to 0, throw an error
-        # Acho que eu nao to tento mais esse problema
-
         N_JOINTS = 9
         limb_length = np.zeros(N_JOINTS-1)
-
-        # joints = np.append([0,0,0],joints)
-        # joints = np.reshape(joints, (N_JOINTS,3))
 
         queue = []
         queue.append(self.torso)
@@ -244,8 +193,6 @@ class Skeleton:
 
             node = queue[0]
 
-            # print(joints[node.pos])
-
             queue.pop(0)
 
             for child in node.children:
@@ -254,11 +201,8 @@ class Skeleton:
                 y = np.append(joints[node.pos][1] , joints[child.pos][1])
                 z = np.append(joints[node.pos][2] , joints[child.pos][2])
 
-                # Eu tava imaginando que todos os membros (limbs) tinham tamanho 1
-                # É próximo de 1 mas não é tudo exatamente esse valor
                 norm = (x[0] - x[1])**2 + (y[0] - y[1])**2 + (z[0] - z[1])**2
                 norm = math.sqrt(norm)
-                # print(norm)
 
                 # ax.plot(x, y, z, marker = 'o')
                 ax.plot(x, y, marker = 'o')
@@ -289,9 +233,6 @@ class Skeleton:
             while(len(queue) > 0):
 
                 node = queue[0]
-
-                # print(joints[node.pos])
-
                 queue.pop(0)
 
                 for child in node.children:
@@ -299,12 +240,6 @@ class Skeleton:
                     x = np.append(joints[node.pos][0] , joints[child.pos][0])
                     y = np.append(joints[node.pos][1] , joints[child.pos][1])
                     z = np.append(joints[node.pos][2] , joints[child.pos][2])
-
-                    # Eu tava imaginando que todos os membros (limbs) tinham tamanho 1
-                    # É próximo de 1 mas não é tudo exatamente esse valor
-                    # norm = (x[0] - x[1])**2 + (y[0] - y[1])**2 + (z[0] - z[1])**2
-                    # norm = math.sqrt(norm)
-                    # print(norm)
 
                     # ax.plot(x, y, z, marker = 'o')
                     ax.plot(x, y, marker = 'o')
@@ -330,7 +265,6 @@ class HMP:
         # The parameter that decides if the model is continuous or not
         self.continuous_model = continuous_model
 
-        # WE COULD CONSIDER THE POSE MATRIX A NEW CLASS (JUST AN IDEA)
         # Create a clear pose matrix
         # Just make it clear: there are actually 2 pose matrix: one is normalized and the other not
         self.reset_pose_matrix()
@@ -351,7 +285,6 @@ class HMP:
             model_path = os.path.join(py_dir, '_vt_d_all_changes.model')
 
         model_path_torso = os.path.join(py_dir, 'vt_d_trans.model') 
-        # model_path = os.path.join(py_dir, '_vt_d_all_changes.model') 
 
         self.model = tf.keras.models.load_model(model_path)
         self.model_torso = tf.keras.models.load_model(model_path_torso)
@@ -390,7 +323,6 @@ class HMP:
         for i in range(log_sigma.shape[0]):
             msg = msg + "{:.4f}".format(log_sigma[i]) + ","
     
-        # print(msg)
         return msg
         
 
@@ -403,7 +335,6 @@ class HMP:
 
     def reset_prediction_matrix(self):
         self.prediction_matrix = np.array([])
-        # Adding the TORSO part (Maybe I wont use it)
         self.prediction_scaled_matrix = np.array([])
         self.log_sigma_complete_matrix = np.array([])
     
@@ -411,21 +342,17 @@ class HMP:
 
         # From 50 to 50 iterations we update the limb_length
         if self.pose_matrix.size == 0 or self.counter % 50 == 0:
-        # if self.pose_matrix.size == 0: 
             self.scale_factor_array = self.skel.get_size_limbs(pose_skel)
 
         # Scale Down the pose
         pose_skel_normalized = self.skel.scale_pose_down(self.skel.torso, pose_skel, self.scale_factor_array)
 
-
         # The first row should have only zeros. So, we will remove it
         pose_skel = pose_skel[1:, :]
-
         pose_skel_normalized = pose_skel_normalized[1:, :]
 
         # To facilitate, now pose_skel has only one row
         pose_skel = np.reshape(pose_skel, (1,-1))
-
         pose_skel_normalized = np.reshape(pose_skel_normalized, (1,-1))
 
         # Just to make sure that it will have just one row
@@ -434,9 +361,7 @@ class HMP:
         if self.pose_matrix.size == 0:
 
             self.pose_matrix = np.array(pose_skel)
-
             self.pose_matrix_normalized = np.array(pose_skel_normalized)
-
             self.torso_matrix = np.array(torso_coord)
 
             return 0
@@ -444,9 +369,7 @@ class HMP:
         elif self.pose_matrix.shape[0] < 50:
 
             self.pose_matrix = np.vstack([self.pose_matrix, pose_skel])
-
             self.pose_matrix_normalized = np.vstack([self.pose_matrix_normalized, pose_skel_normalized])
-
             self.torso_matrix = np.vstack([self.torso_matrix, torso_coord])
 
             return 0
@@ -505,9 +428,6 @@ class HMP:
         
     def evaluate_prediction(self):
 
-        # print("LAST POSE  \n         ", self.last_pose)
-        # print("LAST PREDICTION \n     ", self.last_prediction[:15])
-
         N_JOINTS = 8
         N_TIMEWINDOWS = 50
         
@@ -516,31 +436,17 @@ class HMP:
 
         predicted_poses = self.prediction_matrix[0]
 
-        # print(predicted_poses.shape)
-        # print(past_poses_normalized.shape)
-
         diff = predicted_poses - past_poses_normalized
-
-        # print(diff[:15])
         square = diff**2
-        # print(square[:15])
         square = square.reshape((N_TIMEWINDOWS, 3*N_JOINTS))
 
         # Motion Prediction Error (MSE)
         mpe = square.sum(axis=1)
 
-        # print(mpe[:15])
-
         return mpe
             
     # So, I was thinking right now, and I decided to return 2 predictions: 1- the normalized one 2- The complete one (with torso and everything)
     def predict_motion(self):
-
-        time_now3 = rospy.get_time() 
-
-        # print("\n             PREDICT MOTION             \n  shape pose matrix normalizad")
-
-        # print(self.pose_matrix_normalized.shape)
 
         input_predict = self.pose_matrix_normalized.reshape(-1,1200)
         input_torso_predict = self.torso_matrix.reshape(-1,150) # Also for the TORSO part
@@ -555,14 +461,10 @@ class HMP:
             prediction = np.array(prediction[0])
             log_sigma = np.zeros(prediction.shape)
 
-        time_now4 = rospy.get_time() 
-        # if self.counter%20 == 0:
-        #     print(time_now4 - time_now3)
         prediction_torso = self.model_torso([input_torso_predict, input_torso_predict])[0]
         prediction_torso = np.array(prediction_torso)
 
-
-        # AGORA COM O OFFSET FAZENDO UM TIPO DE FADED
+        # NOW WITH THE OFFSET DOING A KIND OF FADED
         single_pose = np.array(input_predict[0,1176:])
         diff_single = prediction[:24] - single_pose
 
@@ -585,28 +487,9 @@ class HMP:
         pred_faded = prediction - diff_faded
         pred_faded_torso = prediction_torso - diff_faded_torso
 
-        # Maybe comment this line later
         prediction = pred_faded
         prediction_torso = pred_faded_torso
 
-        # # Now for the TORSO part
-        # input_torso_predict = self.torso_matrix.reshape(-1,150)
-
-        # prediction = self.model.predict([input_predict, input_predict])[0]
-
-        # Uncomment this line later
-        # prediction_torso = self.model_torso([input_torso_predict, input_torso_predict])[0]
-        # prediction_torso = np.array(prediction_torso)
-
-        time_now5 = rospy.get_time() 
-
-        # if self.counter%20 == 0:
-        #     print(time_now5 - time_now4)
-
-        # Now, I will combine both predictions to get the entire prediction of the human body
-        # SCALE THE POSE UP (VECTOR PREDICTION)
-
-        # prediction = prediction.reshape(50,8,3)
         prediction_scaled = copy.deepcopy(prediction.reshape(50,24))
         prediction_scaled = np.hstack([np.zeros((prediction_scaled.shape[0],3)),prediction_scaled])
 
@@ -616,7 +499,6 @@ class HMP:
 
         # We also don't need to scale the log_sigma because there will be a constant in the future already scaling it up
         log_sigma_complete = log_sigma.reshape(50,24)
-        # log_sigma_complete = np.hstack([np.zeros((log_sigma_complete.shape[0],3)),log_sigma_complete])
         # Since we are dealing with log_sigma, we should put -inf and not 0. So, lets use -99. exp(-99) is basically 0
         log_sigma_complete = np.hstack([-99*np.ones((log_sigma_complete.shape[0],3)),log_sigma_complete])
 
@@ -628,7 +510,6 @@ class HMP:
             
             # Just to make sure
             joints = joints.reshape(1,27)
-
             joints = self.skel.scale_pose_up(self.skel.torso, joints, self.scale_factor_array)
 
             joints_lab_ref = self.skel.translate_joint(self.skel.torso, joints, -1*prediction_torso[j])
@@ -641,14 +522,6 @@ class HMP:
         prediction_scaled = prediction_scaled.reshape(1,-1)
         log_sigma_complete = log_sigma_complete.reshape(1,-1)
 
-        # TRANSLATE THE POSE BY THE TORSO COORD VALUE
-
-        # print(prediction.shape)
-
-        time_now6 = rospy.get_time()
-        # if self.counter%20 == 0:
-        #     print(time_now6 - time_now3) 
-
         return prediction, prediction_scaled, log_sigma_complete
     
 
@@ -658,15 +531,8 @@ class HMP:
 
         self.counter += 1
 
-        # if self.counter % 30 == 0:
-        #     print("    ", time_now - self.time_sec, "    ")
-        #     self.time_sec = time_now
-
-
         if (self.counter-1) % 1800 == 0:
             print("\n\n\n\n\n\n \n\n PASSED 1 MINUTE      \n\n\n\n\n\n\n\n")   
-            # print("    ", time_now - self.time_min, "    ")
-            # self.time_min = time_now
 
         if self.counter % 1 == 0:
 
@@ -674,10 +540,9 @@ class HMP:
             data = str(data)
             # Just to remove the header "data:
             data = data[7:-1]
-            # print(data)
 
-            # TODO
             # I still need to implement this on the other node (Right now there is no msg with the data "nothing")
+            # But the program actually works fine without this 
             if data == 'nothing':
                 print("The tracking of the skeleton was lost")
                 self.reset_pose_matrix()
@@ -697,42 +562,31 @@ class HMP:
 
                 # Scale Down is done inside the add_pose_matrix
                 run_vae_decision = self.add_pose_matrix(self.last_pose, self.last_torso_real_coord)
-                # Manda rodar a previsão se a matriz tiver cheia
+                # Run the prediction if we have all the 50 frames
                 if run_vae_decision == 1:
                         
                     self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete = self.predict_motion()
                     self.publish_pose(self.last_prediction_scaled, self.last_log_sigma_complete)
                     run_evaluate_prediction = self.add_prediction_matrix(self.last_prediction, self.last_prediction_scaled, self.last_log_sigma_complete)
 
-                    # if self.counter %100 == 0:
-                        # print("\n PREDICTION IS THE FOLLOWING  \n", self.last_prediction_scaled[0,24:27], "\n", self.last_prediction_scaled[0,1347:])
-                        # self.skel.plot_skeleton_Full_Window(self.skel.torso, self.last_prediction_scaled[0,675:702],1)
-                        # self.skel.plot_skeleton_Full_Window2(self.skel.torso, self.last_prediction_scaled[0,:27], self.last_prediction_scaled[0,1323:])
-
-
                     # Call the evaluation of the prediction if the matrix is full
                     if run_evaluate_prediction == 1:
                         
                         if self.counter % 90 == 0:
-                            mpe = self.evaluate_prediction()
-                        
+
+                            # mpe = self.evaluate_prediction()
                             # print("\n\n MPE IS HERE  ",mpe, "\n\n")
 
                             ########## TEST ZONE  ############
 
                             # print("\n",self.pose_matrix_normalized,"\n")
 
-                            # single_pose = np.array(self.pose_matrix_normalized[0])
-
                             poses_pred = self.prediction_matrix[50]
                             single_pose = poses_pred[0:24]
-
-                            # print(single_pose.shape)
 
                             test = np.array([])
 
                             for i in range(50):
-
                                 test = np.append(test, single_pose)
 
                             test = test.reshape(-1,1200)
@@ -742,7 +596,6 @@ class HMP:
                             error_predicted = calculate_MSE(test, poses_pred)
 
                             # print(" SUPOSE STOPPED PERSON (STATIC ERROR)\n\n",error_static, "\n\n")
-
                             print(" SUPOSE STOPPED PERSON (ERROR PREDICTED)\n\n",error_predicted, "\n\n")
 
 
@@ -751,21 +604,10 @@ class HMP:
         time_prev = self.timer_prev
         self.timer_prev = time_now2
 
-        # print(time_now2 - time_now)
-
-        seconds = rospy.get_time()
-
-        # print(seconds)
-
-        # print(data) 
-        # print(type(data))
-
-
 
 if __name__ == '__main__':
 
     rospy.init_node("human_motion_prediction", anonymous=True)
-    # node = HMP(continuous_model=True)
     node = HMP(continuous_model=True)
 
     try:

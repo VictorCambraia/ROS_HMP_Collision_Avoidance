@@ -13,7 +13,7 @@ The communication between these two codes/nodes is done using simple ROS topics.
 
 -> The HMP_with_translation.py code is an outdated version of HMP_trans_continuous.py and is probably already deleted from the repo.
 
--> The .model files are different VAE models built using slightly different configurations (the code to create such models were developed using the colab). In the end, for a continuous prediction (with also the variance to produce a gaussian distribution) we use the model XPTO and for a discrete prediction (just the mean) we use the model XPTO2
+-> The .model files are different VAE models built using slightly different configurations (the code to create such models were developed using the colab). In the end, for a continuous prediction (with also the variance to produce a gaussian distribution) we use the model 'vt_continuous.model' and for a discrete prediction (just the mean) we use the model '_vt_d_all_changes.model'. For the translation model we use the 'vt_d_trans.model'
 
 
 ------------
